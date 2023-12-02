@@ -22,6 +22,7 @@ class Operator {
             ">": "RELATIONAL_OPERATOR",
             "<": "RELATIONAL_OPERATOR",
             "=": "ASSIGNMENT_EQUAL",
+            "^": "POWER",
         };
     }
 

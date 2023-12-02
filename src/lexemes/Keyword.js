@@ -24,6 +24,7 @@ class Keyword {
             'create':'CREATE',
             'try':'TRY',
             'list':'LIST',
+            'catch': "CATCH",
             'implements':'IMPLEMENTS',
 
 

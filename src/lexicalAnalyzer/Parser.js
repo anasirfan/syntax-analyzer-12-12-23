@@ -1,115 +1,272 @@
 // Assume Grammar is properly implemented and provides firstSets and followSets
 import Grammar from "./Grammar";
+import SemanticAnalyzer from "./semantic_analyzer";
+import SymbolTable from "./symbol_table";
 
 class Parser {
   constructor(lexer) {
     console.log(lexer);
-
     this.lexer = lexer;
     this.currentIndex = 0;
     this.currentToken = this.lexer[this.currentIndex];
     this.firstSets = new Grammar().firstSets;
     this.followSets = new Grammar().followSets;
-  }
-
-  match(tokenType) {
-    console.log("match");
-    if (this.currentToken.type === tokenType) {
-      console.log("if");
-       this.currentIndex += 1;
-      this.currentToken = this.lexer[this.currentIndex];
-      console.log("next token : " + this.currentToken);
-    } else {
-      console.error(
-        `Unexpected token. Expected ${tokenType}, but got ${this.currentToken.type}`
-      );
-    }
+    this.SymbolTable = new SymbolTable();
+    this.SemanticAnalyzer = new SemanticAnalyzer();
   }
 
   parseS() {
-    if (this.currentToken && this.currentToken.type) {
-      console.log("type:" + this.currentToken.type);
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseS()"
+    );
 
+    if (this.currentToken && this.currentToken.class) {
       if (
-        this.firstSets.SST.has(this.currentToken.class) ||
-        this.firstSets.SST.has(this.currentToken.lexeme) ||
-        this.firstSets.SST.has(this.currentToken.type)
-      ) {
-        this.parseSST();
-      } else if (this.currentToken.type === "class") {
-        this.parseClass();
-      } else if (this.currentToken.type === "abstract") {
-        this.parseAbstract();
-      } else if (this.currentToken.type === "interface") {
-        this.parseInterface();
-      } else {
-        console.log(this.currentToken);
-        if (this.currentToken && this.currentToken.type) {
-          console.log(
-            "error parsing from structure on :" + this.currentToken.type
-          );
+        this.currentToken.lexeme !== "EOF" &&
+        this.currentToken.lexeme !== "abstract" &&
+        this.currentToken.lexeme !== "interface" &&
+        this.currentToken.lexeme !== "class" &&
+        this.parseSST()
+      ){
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "parse sst "
+        );
+        if (this.parseS()) {
+          return true;
         }
+
+      } else if (this.Access_modifier()) {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "class found!"
+        );
+        if (this.Class()) {
+          if (this.parseS()) {
+            return true;
+          }
+        } else if (this.currentToken.lexeme === "abstract") {
+          if(this.Abstract_class()){
+            if (this.parseS()) {
+              return true;
+            }
+          }
+        } 
+      }  else if (this.currentToken.lexeme === "interface") {
+        if(this.parseInterface()){
+          return true;
+        }
+      } else if (this.currentToken.type === "EOF") {
+        return true;
+      } else {
+        return false;
       }
     }
   }
 
   // Parser   for SST
   parseSST() {
-    if (this.currentToken.class === "CREATE") {
-      console.log("create found! ");
-       this.currentIndex += 1;
-      this.currentToken = this.lexer[this.currentIndex];
-      if( this.parseDeclaration()){
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseSST()"
+    );
+
+    if (this.Expression()) {
+      if (this.currentToken.lexeme === ";") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
         return true;
       }
-     
-    } else if (this.parseDeclaration()) {
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+      
+    } 
+
+   else if (this.parseDeclaration()) {
+      return true;
+    } else if (this.parseTryExcept()) {
+      return true;
+    } else if (this.parseReturn()) {
+      return true;
+    } else if (this.func_dec()) {
+      return true;
+    } else if (this.parseIfElse()) {
+      return true;
+    } else if (this.Array_def()) {
+      return true;
+    } else if (this.parseBreak()) {
+      return true;
+    } else if (this.parseCycleLoop()) {
+      return true;
+    } 
+    
+    else if (this.TS()) {
+      if (this.Expression()) {
+        if (this.currentToken.lexeme === ";") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      //  throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+      }
+    }else if(this.Expression()){
+      return true;
+
+    } else if (this.const()) {
+      return true;
+    } else if (this.parseContinue()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  parseSST1() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseSST1()"
+    );
+
+    if (this.Array_def()) {
       return true;
     }
-    // while (this.currentToken.type !== 'EOF') {
-    //   if (this.firstSets.SST.has(this.currentToken.class)) {
-    //     console.log('true');
-    //     if (this.firstSets.create.has(this.currentToken.class)) {
-    //       console.log("create keyword found!");
-    //       this.parseCreate();
-    //     } else if (this.firstSets.loop.has(this.currentToken.class)) {
-    //       this.parseCycleLoop();
-    //     } else if (this.firstSets.if_else.has(this.currentToken.class)) {
-    //       this.parseIfElse();
-    //     } else if (this.firstSets.return.has(this.currentToken.class)) {
-    //       this.parseReturn();
-    //     }
-    //     else if (this.firstSets.break.has(this.currentToken.lexeme)) {
-    //       this.parseList();
-    //     }
-    //     else if (this.firstSets.continue.has(this.currentToken.lexeme)) {
-    //       this.parseList();
-    //     }
-    //     else if (this.firstSets.create.has(this.currentToken.lexeme)) {
-    //       this.parseList();
-    //     }
-
-    //     // Add more conditions based on your grammar rules
-    //   } else {
-    //     console.error(`Unexpected token for SST: ${this.currentToken.type}`);
-    //   }
-    //    this.currentIndex += 1;
-    this.currentToken = this.lexer[this.currentIndex];
-    //   this.currentToken = this.lexer[this.currentIndex];
+    //  else if (this.parseObject()) {
+    //   return true;
     // }
+    else if (this.inc_dec()) {
+      return true;
+    } else if (this.Arr_func()) {
+      return true;
+    } else if (this.currentToken.type === "DATATYPE") {
+      return true;
+    } else if (this.currentToken.lexeme === "return") {
+      return true;
+    } else if (this.currentToken.lexeme === "if") {
+      return true;
+    } else if (this.currentToken.lexeme === "cycle") {
+      return true;
+    } else if (this.currentToken.lexeme === "break") {
+      return true;
+    } else if (this.currentToken.lexeme === "continue") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.lexeme === "try") {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "except") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
+    }
   }
-  parseCreate() {
-    this.parseDeclaration();
-  }
-  parseInit() {
-    if (this.currentToken.lexeme === "=") {
-      console.log("assignment operator found! ");
-       this.currentIndex += 1;
+
+  TS() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "TS()"
+    );
+
+    if (
+      this.currentToken.lexeme === "this" ||
+      this.currentToken.lexeme === "super"
+    ) {
+      this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      if (this.Expression()) {
-        console.log("Expression completed! ");
+      if (this.currentToken.lexeme === ".") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        return true;
       }
-    } else if (this.currentToken.lexeme === "++") {
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (
+      this.const() ||
+      this.currentToken.lexeme === "(" ||
+      this.currentToken.lexeme === "!" 
+      || this.currentToken.class === "VARIABLE"
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  parseInit() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseInit()"
+    );
+
+    if (this.currentToken.lexeme === "=") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "assignment operator found! "
+      );
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      // if (this.TS()) {
+      if (this.Expression()) {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "Expression completed! "
+        );
+        return true;
+      }
+      // }
+    } else if (this.currentToken.lexeme === ";") {
       return true;
     } else if (this.currentToken.lexeme === ",") {
       return true;
@@ -118,196 +275,2728 @@ class Parser {
     }
   }
   parseInitList() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseInitList()"
+    );
+
     if (this.currentToken.lexeme === ",") {
-       this.currentIndex += 1;
+      this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
+
       if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
         if (this.parseInit()) {
+          console.log("parse init true");
           if (this.parseInitList()) {
             return true;
           }
         }
       }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.lexeme === ";") {
+     
+      return true;
+    } else {
+      return false;
+    }
+  }
+  ClassparseInit() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseInit()"
+    );
+
+    if (this.currentToken.lexeme === "=") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "assignment operator found! "
+      );
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.TS()) {
+        if (this.Expression()) {
+          console.log(
+            this.currentToken.class +
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "Expression completed! "
+          );
+          return true;
+        }
+       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+      }
+    } 
+     else if (this.currentToken.lexeme === ";") {
+    
+      return true;
+    } else if (this.currentToken.lexeme === ",") {
+    
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  FollowSST() {
+    if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else if (this.currentToken.lexeme === "break") {
+      return true;
+    } else if (this.currentToken.lexeme === "continue") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.lexeme === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "list") {
+      return true;
+    } else if (this.currentToken.lexeme === "return") {
+      return true;
+    } else if (this.currentToken.lexeme === "if") {
+      return true;
+    } else if (this.currentToken.lexeme === "cycle") {
+      return true;
+    } else if (this.currentToken.type === "DataType") {
+      return true;
+    } else if (this.currentToken.class === "AccessModifiers") {
+      return true;
+    } else if (this.currentToken.lexeme === "class") {
+      return true;
+    } else if (this.currentToken.lexeme === "interface") {
+      return true;
+    } else if (this.currentToken.lexeme === "abstract") {
+      return true;
+    } else if (this.currentToken.lexeme === "try") {
+      return true;
+    } else if (this.currentToken.lexeme === ";") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  ClassparseInitList() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseInitList()"
+    );
+
+    if (this.currentToken.lexeme === ",") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.ClassparseInit()) {
+          if (this.ClassparseInitList()) {
+            return true;
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.lexeme === ";") {
+   
+      return true;
+    } else {
+      return false;
     }
   }
 
   // Parser   for Declaration
   parseDeclaration() {
-    if (this.currentToken.class === "DataTypes") {
-      console.log("data type found!");
-       this.currentIndex += 1;
-
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseDeclaration()"
+    );
+    if (this.currentToken.class === "CREATE") {
+      this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      if (this.currentToken.class === "VARIABLE") {
-         this.currentIndex += 1;
+      if (this.currentToken.class === "DataTypes") {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "data type found!"
+        );
+        this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
-        console.log("var found!");
-     
-        if (this.parseInit()) {
-          console.log("init parsing found!");
+        if (this.currentToken.class === "VARIABLE") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          console.log(
+            this.currentToken.class +
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "var found!"
+          );
 
-          if (this.parseInitList()) {
-            console.log("init parsing list found!");
+          if (this.parseInit()) {
+            console.log(
+              this.currentToken.class +
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "init parsing found!"
+            );
 
+            if (this.parseInitList()) {
+              console.log(
+                this.currentToken.class +
+                  " " +
+                  this.currentToken.lexeme +
+                  " ON LINE - " +
+                  this.currentToken.lineNumber +
+                  " " +
+                  "init parsing list found!"
+              );
+
+              return true;
+            }
+          } else if (this.currentToken.lexeme === ";") {
             return true;
           }
         }
-        else if(this.currentToken.lexeme === ";"){
-           console.log("semi colon found!");
-         }
-         else{
-           console.log("semi colon not found!");
-         }
       }
+       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+    } else if (this.currentToken.lexeme === ")") {
+      return true;
+    } else {
+      return false;
     }
-
-    // if (this.firstSets.declaration.has(this.currentToken.class) || this.firstSets.declaration.has(this.currentToken.lexeme) || this.firstSets.declaration.has(this.currentToken.type)) {
-    //   console.log("current lexeme : " + this.currentToken.lexeme + " " + this.currentIndex);
-    //   // Example: If Declaration starts with DataType, call parseDataType
-    //   if (this.currentToken.class === 'DataTypes') {
-    //     this. parseVarDec();
-    //   } else if (this.currentToken.type === 'Operator') {
-    //     this.parseOperator();
-    //   } else if (this.currentToken.type === 'Variable') {
-
-    //     console.log('variable success!');
-    //   } else if (this.currentToken.type === 'Punctuator') {
-    //     if (this.firstSets.declaration.has(this.currentToken.class)) {
-    //       console.log('punctuator success!');
-    //     } else {
-    //       console.error(`Unexpected token for Declaration: ${this.currentToken.lexeme}`);
-    //     }
-    //   }
-    //   else if (this.currentToken.class === 'INTEGER') {
-
-    //     console.log('integer success!');
-    //   }
-    //   else if (this.currentToken.class === 'FLOATING_POINT') {
-
-    //     console.log('FLOATING_POINT success!');
-    //   }
-    //   else if (this.currentToken.class === 'BOOLEAN') {
-
-    //     console.log('BOOLEAN success!');
-    //   }
-    //   else if (this.currentToken.class === 'STRING') {
-
-    //     console.log('STRING success!');
-    //   }
-
-    //   // Add more conditions based on your grammar rules
-    // } else {
-    //   console.error(`Unexpected token for Declaration: ${this.currentToken.type}`);
-    // }
-    //  this.currentIndex += 1;
-    this.currentToken = this.lexer[this.currentIndex];
-    // this.currentToken = this.lexer[this.currentIndex];
   }
-  parseList() {
-    while (this.currentToken.lexeme === "]") {
-      if (
-        this.followSets.list.has(this.currentToken.class) ||
-        this.followSets.list.has(this.currentToken.lexeme)
-      ) {
-        this.parseOE();
-      } else {
-        console.error(
-          `Unexpected token for DataType: ${this.currentToken.type}`
-        );
-      }
-       this.currentIndex += 1;
+
+  parseReturn() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseReturn()"
+    );
+
+    if (this.currentToken.lexeme === "return") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "return success"
+      );
+      this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
+      if (this.cases()) {
+        return true;
+      }
+    } else {
+      return false;
     }
   }
 
-  parseOperator() {
-    if (this.firstSets.oe.has(this.currentToken.class)) {
-      console.log("parseOperator()");
+  cases() {
+    if (this.Expression()) {
+      return true;
+    } else if (this.currentToken.lexeme === "class") {
+      return true;
+    } else if (this.currentToken.lexeme === "abstract") {
+      return true;
+    } else if (this.currentToken.lexeme === "interface") {
+      return true;
     } else {
-      console.error(`Unexpected token for DataType: ${this.currentToken.type}`);
+      return false;
     }
   }
 
-  // Parser   for DataType
-  parseDataType() {
-    if (this.currentToken.type === "DataType") {
-      console.log("parseDataType()");
-      this.match("DataType");
+  parseReturn1() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseReturn1()"
+    );
+
+    if (this.Expression()) {
+      if (this.currentToken.lexeme === ";") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        return true;
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.lexeme === ";") {
+      console.log("semi colon found!");
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    }
+  }
+
+  parseBreak() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseBreak()"
+    );
+
+    if (this.currentToken.lexeme === "break") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
     } else {
-      console.error(`Unexpected token for DataType: ${this.currentToken.type}`);
+      return false;
+    }
+  }
+
+  parseContinue() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseContinue()"
+    );
+
+    if (this.currentToken.lexeme === "continue") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  inc_dec() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "inc_dec()"
+    );
+
+    if (this.inc_dec_opt()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  inc_dec_opt() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "inc_dec_opt()"
+    );
+
+    if (this.currentToken.lexeme === "++") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else if (this.currentToken.lexeme === "--") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  // Parser   for IfElse
+  parseIfElse() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseIfElse()"
+    );
+
+    if (this.currentToken.lexeme === "if") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "if found!"
+      );
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === "(") {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "starting braces found!"
+        );
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.Expression()) {
+          if (this.currentToken.lexeme === ")") {
+            console.log(
+              this.currentToken.class +
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "ending braces found!"
+            );
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.body()) {
+              if (this.else()) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "body()"
+    );
+
+    if (this.parseSST()) {
+      return true;
+    } else if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.parseMST()) {
+        if (this.currentToken.lexeme === "}") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
     }
   }
 
   parseMST() {
-    if (this.firstSets.MST.has(this.currentToken.type)) {
-      // Example: If MST starts with 'return', call parseReturn
-      if (this.currentToken.type === "return") {
-        this.parseReturn();
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseMST()"
+    );
+
+    if (this.parseSST()) {
+      if (this.parseMST()) {
+        return true;
+      } else if (this.currentToken.lexeme === "}") {
+        return true;
       }
-      // Add more conditions based on your grammar rules
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
     } else {
-      console.error(`Unexpected token for MST: ${this.currentToken.type}`);
+      return false;
     }
   }
 
-  // Parser   for Return
-  parseReturn() {
-    if (this.currentToken.type === "return") {
-      console.log("return success");
-       this.currentIndex += 1;
+  else() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "else()"
+    );
+
+    if (this.currentToken.lexeme === "else") {
+      this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      // Assuming 'return' is always followed by an expression
-      this.parseOE();
+      if (this.body()) {
+        return true;
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.type === "Datatype") {
+      return true;
+    } else if (this.currentToken.lexeme === "return") {
+      return true;
+    } else if (this.currentToken.lexeme === "list") {
+      return true;
+    } else if (this.currentToken.lexeme === "if") {
+      return true;
+    } else if (this.currentToken.lexeme === "cycle") {
+      return true;
+    } else if (this.currentToken.lexeme === "break") {
+      return true;
+    } else if (this.currentToken.lexeme === "continue") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "except") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "try") {
+      return true;
+    } else if (this.currentToken.class === "AccessModifiers") {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else if (this.currentToken.lexeme === "class") {
+      return true;
+    } else if (this.currentToken.lexeme === "interface") {
+      return true;
+    } else if (this.currentToken.lexeme === "abstract") {
+      return true;
     } else {
-      console.error(`Unexpected token for Return: ${this.currentToken.type}`);
+      return false;
     }
   }
 
-  // // Parser   for OE
-  // parseOE() {
+  parseCycleLoop() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseCycleLoop()"
+    );
 
-  //     if (
-  //       this.firstSets.oe.has(this.currentToken.class) ||
-  //       this.firstSets.oe.has(this.currentToken.lexeme) ||
-  //       this.followSets.oe.has(this.currentToken.class) ||
-  //       this.followSets.oe.has(this.currentToken.lexeme)
-  //     ) {
-  //       if()
-  //       // Example: If OE starts with '(', call parseF2
-  //       if (this.currentToken.lexeme === "(") {
-  //         this.parseF2();
-  //       } else if (this.currentToken.lexeme === "VARIABLE") {
-  //         this.parseF2();
-  //         console.log("variable success!");
-  //       } else if (this.currentToken.lexeme === "ASSIGNMENT_EQUAL") {
-  //         console.log("assignment equal success!");
-  //       } else if (this.currentToken.lexeme === "INTEGER") {
-  //         console.log("INTEGER success!");
-  //       } else if (this.currentToken.lexeme === "]") {
-  //         return;
-  //       } else {
-  //         console.log(this.currentToken.lexeme + " success!");
-  //       }
-  //       // Add more conditions based on your grammar rules
-  //     } else {
-  //       console.error(`Unexpected token for OE: ${this.currentToken.type}`);
-  //     }
-  //      this.currentIndex += 1;
-  //     this.currentToken = this.lexer[this.currentIndex];
-  //     this.currentToken = this.lexer[this.currentIndex];
+    if (this.currentToken.lexeme === "cycle") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.loopCases()) {
+        if (this.parseCycleLoopBody()) {
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
 
-  // }
+    } else {
+      return false;
+    }
+  }
+
+  loopCases() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "loopCases()"
+    );
+    if (this.currentToken.lexeme === "(") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.parseDeclaration()) {
+        console.log("parse completed in cycle");
+        if (this.Expression()) {
+          console.log("Expression completed in cycle");
+
+          if (this.currentToken.lexeme === ";") {
+            console.log("semi col found in cycle");
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if(this.Expression()){
+              if(this.currentToken.lexeme === ";"){
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+              
+            if (this.currentToken.class === "VARIABLE") {
+              console.log("VARIABLE  found in cycle");
+
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.currentToken.lexeme === "++") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                console.log("++  found in cycle");
+                if (this.currentToken.lexeme === ")") {
+                  this.currentIndex += 1;
+                  this.currentToken = this.lexer[this.currentIndex];
+                  return true;
+                }
+              }
+            }
+          }
+            }
+          }
+        }
+      } else if (this.currentToken.lexeme === "{") {
+        return true;
+      } else if (this.Expression()) {
+        if (this.currentToken.lexeme === ")") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.type === "Datatype") {
+      return true;
+    } else if (this.currentToken.lexeme === "return") {
+      return true;
+    } else if (this.currentToken.lexeme === "list") {
+      return true;
+    } else if (this.currentToken.lexeme === "if") {
+      return true;
+    } else if (this.currentToken.lexeme === "cycle") {
+      return true;
+    } else if (this.currentToken.lexeme === "break") {
+      return true;
+    } else if (this.currentToken.lexeme === "continue") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "except") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "try") {
+      return true;
+    } else if (this.currentToken.class === "AccessModifiers") {
+      return true;
+    } else if (this.currentToken.lexeme === "{") {
+      return true;
+    } else if (this.currentToken.lexeme === "class") {
+      return true;
+    } else if (this.currentToken.lexeme === "interface") {
+      return true;
+    } else if (this.currentToken.lexeme === "abstract") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  parseCycleLoopBody() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseCycleLoopBody()"
+    );
+
+    if (this.parseSST()) {
+      return true;
+    } else if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.parseMST()) {
+        if (this.currentToken.lexeme === "}") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  parseTryExcept() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseTryExcept()"
+    );
+
+    if (this.currentToken.lexeme === "try") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === "{") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.parseMST()) {
+          if (this.currentToken.lexeme === "}") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.tryRest()) {
+              return true;
+            }
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+  tryRest() {
+    if (this.currentToken.lexeme === "catch") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === "(") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.class === "VARIABLE") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.lexeme === ")") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.currentToken.lexeme === "{") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.parseMST()) {
+                if (this.currentToken.lexeme === "}") {
+                  this.currentIndex += 1;
+                  this.currentToken = this.lexer[this.currentIndex];
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  try_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "try_body()"
+    );
+
+    if (this.parseSST()) {
+      return true;
+    } else if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.parseMST()) {
+        if (this.currentToken.lexeme === "}") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  except() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "except()"
+    );
+
+    if (this.currentToken.lexeme === "except") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.except_body()) {
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    }
+  }
+
+  except_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "except_body()"
+    );
+
+    if (this.parseSST()) {
+      return true;
+    } else if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.parseMST()) {
+        if (this.currentToken.lexeme === "{") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  func_dec() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "func_dec()"
+    );
+
+    if (this.currentToken.type === "DataType") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.lexeme === "(") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.PARAMLIST()) {
+            console.log(
+              this.currentToken.class +
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "expression comp"
+            );
+            if (this.currentToken.lexeme === ")") {
+              console.log("closing at func")
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.func_body()) {
+                return true;
+              }
+            }
+          } else if (this.currentToken.lexeme === "{") {
+            console.log("starting brace");
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.func_body()) {
+              return true;
+            }
+          } else if (this.currentToken.lexeme === ")") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.func_body()) {
+              return true;
+            }
+          } else {
+            console.log("cant find {");
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  PARAMLIST() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "PARAMLIST()"
+    );
+
+    if (this.type()) {
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.PL2()) {
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentIndex.lexeme === ")") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  type() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "type()"
+    );
+    if (
+      this.currentToken.class === "VARIABLE" ||
+      this.currentToken.type === "DataType"
+    ) {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } 
+     else {
+      return false;
+    }
+  }
+  PL2() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "PL2()"
+    );
+    if (this.currentToken.lexeme === ",") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.type()) {
+        if (this.currentToken.class === "VARIABLE") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.PL2()) {
+            return true;
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.lexeme === ")") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  func_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "func_body()"
+    );
+
+    if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.parseMST()) {
+        if (this.currentToken.lexeme === "}") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.type === "Datatype") {
+      return true;
+    } else if (this.currentToken.lexeme === "return") {
+      return true;
+    } else if (this.currentToken.lexeme === "list") {
+      return true;
+    } else if (this.currentToken.lexeme === "if") {
+      return true;
+    } else if (this.currentToken.lexeme === "cycle") {
+      return true;
+    } else if (this.currentToken.lexeme === "break") {
+      return true;
+    } else if (this.currentToken.lexeme === "continue") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "except") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "try") {
+      return true;
+    } else if (this.currentToken.class === "AccessModifiers") {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else if (this.currentToken.lexeme === "class") {
+      return true;
+    } else if (this.currentToken.lexeme === "interface") {
+      return true;
+    } else if (this.currentToken.lexeme === "abstract") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  Array_def() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Array_def()"
+    );
+
+    if (this.currentToken.lexeme === "list") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.Arr_type()) {
+        if (this.currentToken.class === "VARIABLE") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.lexeme === "=") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.body_Arr()) {
+              return true;
+            }
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  Arr_type() {
+    if (this.currentToken.type === "DataType") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else if (this.currentToken.lexeme === "list") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.type === "DataType") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        return true;
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  body_Arr() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "body_Arr()"
+    );
+
+    if (this.currentToken.lexeme === "[") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.inside_Arr_body()) {
+        if (this.currentToken.lexeme === "]") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.lexeme === ";") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            return true;
+          }
+        }
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+
+    } else {
+      return false;
+    }
+  }
+
+  inside_Arr_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "inside_Arr_body()"
+    );
+     if(this.body_Arr()){
+      if(this.a()){
+
+        return true;
+      }
+    }
+
+    else if (this.Expression()) {
+      if (this.a()) {
+        return true;
+      }
+    } 
+    else if (this.currentToken.lexeme === "]") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  a() {
+    if (this.currentToken.lexeme === ",") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.inside_Arr_body()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "]") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  rpt2() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "rpt2()"
+    );
+
+    if (this.currentToken.lexeme === ",") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.inside_Arr_body()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "]") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Arr_func() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Arr_func()"
+    );
+
+    if (this.currentToken.lexeme === ".") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.Array_call_func()) {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  Array_call_func() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Array_call_func()"
+    );
+
+    if (this.currentToken.lexeme === "append") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === "(") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.append_value()) {
+          if (this.currentToken.lexeme === ")") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            return true;
+          }
+        }
+      }
+    } else if (this.currentToken.lexeme === "pop") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === "(") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.lexeme === ")") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  append_value() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "append_value()"
+    );
+
+    if (this.currentToken.class === "VARIABLE") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else if (this.const()) {
+      return true;
+    } else if (this.body_Arr()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Array_call() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Array_call()"
+    );
+
+    if (this.currentToken.lexeme === "[") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.Expression()) {
+        if (this.currentToken.lexeme === "]") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.arrayRemaining()) {
+            return true;
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  arrayRemaining() {
+    if (this.Array_call()) {
+      return true;
+    } else if (this.F2()) {
+      return true;
+    } else if (this.currentToken.class === "INCREMENT_DECREMENT") {
+      return true;
+    } else if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
+      return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (
+      this.currentToken.class === "COMPOUND_EQUAL_PLUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MINUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_DIVIDE" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MULTIPLY"
+    ) {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "(") {
+      return true;
+    } else if (this.currentToken.lexeme === "!") {
+      return true;
+    } else if (this.constfollow()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  func_call() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "func_call()"
+    );
+
+    if (this.currentToken.lexeme === "(") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.Expression()) {
+        if (this.currentToken.lexeme === ")") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.L()) {
+            return true;
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  L() {
+    // if (this.currentToken.lexeme === "[") {
+    //   this.currentIndex += 1;
+    //   this.currentToken = this.lexer[this.currentIndex];
+    //   if (this.Expression()) {
+    //     if (this.currentToken.lexeme === "]") {
+    //       this.currentIndex += 1;
+    //       this.currentToken = this.lexer[this.currentIndex];
+    //       if(this.L()){
+    //         return true;
+    //       }
+    //     }
+    //   }
+    // }
+    if (this.F2()) {
+      if (this.L()) {
+        return true;
+      }
+    } else if (this.currentToken.class === "INCREMENT_DECREMENT") {
+      return true;
+    } else if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
+      return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (
+      this.currentToken.class === "COMPOUND_EQUAL_PLUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MINUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_DIVIDE" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MULTIPLY"
+    ) {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "(") {
+      return true;
+    } else if (this.currentToken.lexeme === "!") {
+      return true;
+    } else if (this.constfollow()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  func_call_value() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "func_call_value()"
+    );
+
+    if (this.Expression()) {
+      if (this.rpt3()) {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  rpt3() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "rpt3()"
+    );
+
+    if (this.currentToken.lexeme === ",") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.func_call_value()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === ")") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  object_dec() {
+    console.log("comes at obj dec at " + this.currentToken.lexeme);
+    if (this.currentToken.class === "VARIABLE") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.lexeme === "=") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.class === "VARIABLE") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.currentToken.lexeme === "(") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+
+              if (this.currentToken.lexeme === ")") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                return true;
+              }
+            }
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  object_call() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "object_call()"
+    );
+
+    if (this.call()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  call() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "call()"
+    );
+
+    if (this.currentToken.lexeme === ".") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.recall()) {
+          return true;
+        } else if (this.currentToken.lexeme === ";") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  recall() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "recall()"
+    );
+
+    if (this.call()) {
+      return true;
+    } else if (this.func_call()) {
+      if (this.call()) {
+        return true;
+      }
+    } else if (this.Array_call()) {
+      if (this.call()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "return") {
+      return true;
+    } else if (this.currentToken.lexeme === "continue") {
+      return true;
+    } else if (this.currentToken.lexeme === "cycle") {
+      return true;
+    } else if (this.currentToken.lexeme === "try") {
+      return true;
+    } else if (this.currentToken.lexeme === "if") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.lexeme === "this") {
+      return true;
+    } else if (this.currentToken.lexeme === "super") {
+      return true;
+    } else if (this.currentToken.lexeme === "=") {
+      return true;
+    } else if (this.currentToken.type === "DataType") {
+      return true;
+    } else if (this.currentToken.lexeme === "list") {
+      return true;
+    } else if (this.currentToken.lexeme === "break") {
+      return true;
+    } else if (this.currentToken.lexeme === "]") {
+      return true;
+    } else if (this.currentToken.lexeme === ")") {
+      return true;
+    } else if (this.currentToken.lexeme === ";") {
+      return true;
+    } else if (this.currentToken.lexeme === ",") {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.constfollow()) {
+      return true;
+    } else if (this.currentToken.lexeme === "!") {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  classElse() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "else()"
+    );
+
+    if (this.currentToken.lexeme === "else") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.body()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "return") {
+      return true;
+    } else if (this.currentToken.lexeme === "if") {
+      return true;
+    } else if (this.currentToken.lexeme === "cycle") {
+      return true;
+    } else if (this.currentToken.lexeme === "break") {
+      return true;
+    } else if (this.currentToken.lexeme === "continue") {
+      return true;
+    } else if (this.currentToken.lexeme === "else") {
+      return true;
+    } else if (this.currentToken.lexeme === "except") {
+      return true;
+    } else if (this.currentToken.lexeme === "try") {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  parseClassIfElse() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parseIfElse()"
+    );
+
+    if (this.currentToken.lexeme === "if") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "if found!"
+      );
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === "(") {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "starting braces found!"
+        );
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.Expression()) {
+          if (this.currentToken.lexeme === ")") {
+            console.log(
+              this.currentToken.class +
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "ending braces found!"
+            );
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.classifelsebody()) {
+              if (this.else()) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  rest() {
+    if (this.CMST()) {
+      if (this.rest()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "}") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  classifelsebody() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "body()"
+    );
+
+    if (this.parseCMST()) {
+      return true;
+    } else if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.rest()) {
+        if (this.currentToken.lexeme === "}") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  Class() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Class()"
+    );
+
+   
+      if (this.currentToken.lexeme === "class") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+
+        if (this.currentToken.class === "VARIABLE") {
+          console.log(
+            this.currentToken.class +
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "var found!"
+          );
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+
+          if (this.Inheritance()) {
+            console.log(
+              this.currentToken.class +
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "inh true"
+            );
+            if(this.opt_imp()){
+            if (this.class_body()) {
+              return true;
+            }
+          }
+        }
+        }
+        throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+      
+
+    } else {
+      return false;
+    }
+  }
+
+  Access_modifier() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Access_modifier()"
+    );
+
+    if (this.currentToken.class === "AccessModifiers") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else if (this.currentToken.lexeme === "class") {
+      return true;
+    } else if (this.currentToken.type === "DataType") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.lexeme === "abstract") {
+      return true;
+    } else if (this.currentToken.lexeme === "static") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Inheritance() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Inheritance()"
+    );
+
+    if (this.currentToken.lexeme === "extends") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "extends found"
+      );
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "VARIABLE") {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "extends var found"
+        );
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.opt_imp()) {
+          return true;
+        } else if (this.currentToken.lexeme === "{") {
+          return true;
+        }
+      }
+    } else if(this.currentToken.lexeme === "implements"){
+      return true;
+    }
+     else if (this.currentToken.lexeme === "{") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  opt_imp() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "opt_imp()"
+    );
+
+    if (this.currentToken.lexeme === "implements") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "implement found"
+      );
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+
+      if (this.currentToken.class === "VARIABLE") {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "extends var found"
+        );
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.opt_imp()) {
+          return true;
+        } 
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme + " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber);
+    } else if(this.currentToken.lexeme === "{"){
+      return true;
+    }
+     else {
+      return false;
+    }
+  }
+
+  class_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "class_body()"
+    );
+
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "class body at " +
+        this.currentToken.lexeme
+    );
+
+    if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "class csst in c body"
+      );
+      if (this.CSST()) {
+         console.log("came out of csst" + this.currentToken.lexeme);
+      
+
+        if (this.currentToken.lexeme === "}") {
+          console.log("end braces")
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+    } 
+   console.log(" executing the false") 
+    // else {
+      return false;
+    // }
+  }
+
+  CMST() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "CMST()"
+    );
+
+    if (this.parseReturn()) {
+      return true;
+    } else if (this.parseContinue()) {
+      return true;
+    } else if (this.parseBreak()) {
+      return true;
+    } else if (this.parseCycleLoop()) {
+      return true;
+    } else if (this.parseIfElse()) {
+      return true;
+    } else if (this.TS()) {
+      if (this.Expression()) {
+        if (this.currentToken.lexeme === ";") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+
+          return true;
+        }
+      }
+    } else if (this.currentToken.lexeme === "create") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.Access_modifier()) {
+        if (this.classVarDeclaration()) {
+          return true;
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  class_Dec() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "class_Dec()"
+    );
+
+    if (this.Access_modifier()) {
+      if (this.classVarDeclaration()) {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
+  classVarDeclaration() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "classVarDeclaration()"
+    );
+
+    if (this.IFStatic()) {
+      if (this.currentToken.type === "DataType") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.class === "VARIABLE") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+
+          if (this.ClassparseInit()) {
+            console.log(
+              this.currentToken.class +
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "init parsing found!"
+            );
+            if (this.ClassparseInitList()) {
+              console.log(
+                this.currentToken.class +
+                  " " +
+                  this.currentToken.lexeme +
+                  " ON LINE - " +
+                  this.currentToken.lineNumber +
+                  " " +
+                  "init parsing list found!"
+              );
+
+              return true;
+            } else if (this.currentToken.lexeme === ")") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              return true;
+            }
+          } else if (this.ClassparseInit()) {
+            console.log(
+              this.currentToken.class +
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "init parsing found!"
+            );
+            if (this.ClassparseInitList()) {
+              console.log(
+                this.currentToken.class +
+                  " " +
+                  this.currentToken.lexeme +
+                  " ON LINE - " +
+                  this.currentToken.lineNumber +
+                  " " +
+                  "init parsing list found!"
+              );
+              return true;
+            }
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  IFStatic() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "IFStatic()"
+    );
+
+    if (this.currentToken.lexeme === "static") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else if (this.currentToken.type === "DataType") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  class_method() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "class_method()"
+    );
+
+    if (this.Access_modifier()) {
+      if (this.IFStatic()) {
+        if (this.currentToken.type === "DataType") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.class === "VARIABLE") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.currentToken.lexeme === "(") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+
+              if (this.currentToken.lexeme === ")") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                if (this.c_method_body()) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  c_method_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "c_method_body()"
+    );
+
+    if (this.currentToken.lexeme === "{") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.parseMST()) {
+        if (this.currentToken.lexeme === "}") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          return true;
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  CSST() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "CSST()"
+    );
+
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "CSST found"
+    );
+    if (this.currentToken.class === "CREATE") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.ParseDec()) {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "PARSE DEC C OMPLETE"
+        );
+        if (this.currentToken.lexeme === "{") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.lexeme === "}") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            return true;
+          }
+        } else if (this.currentToken.lexeme === ";") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if(this.CSST()){
+
+            return true;
+          }
+        }
+        
+      } 
+    } else if (this.Constructor()) {
+      return true;
+    } else if (this.class_method()) {
+      if (this.CSST()) {
+        return true;
+      }
+    } else if (this.Array_def()) {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      
+
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  ParseDec() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "ParseDec()"
+    );
+
+    if (this.class_Dec()) {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "class dec complete"
+      );
+      return true;
+    } else if (this.object_dec()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Constructor() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Constructor()"
+    );
+
+    if (this.Access_modifier()) {
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.lexeme === "(") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.CSST()) {
+            if (this.currentToken.lexeme === ")") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.currentToken.lexeme === "{") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                if (this.constructor_body()) {
+                  if (this.currentToken.lexeme === "}") {
+                    this.currentIndex += 1;
+                    this.currentToken = this.lexer[this.currentIndex];
+                    return true;
+                  }
+                }
+              }
+            }
+          } else if (this.currentToken.lexeme === ")") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.currentToken.lexeme === "{") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.constructor_body()) {
+                if (this.currentToken.lexeme === "}") {
+                  this.currentIndex += 1;
+                  this.currentToken = this.lexer[this.currentIndex];
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  constructor_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "constructor_body()"
+    );
+
+    if (this.classVarDeclaration()) {
+      if (this.constructor_body()) {
+        return true;
+      }
+    } else if (this.Expression()) {
+      if (this.constructor_body()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  constructor_MST() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "constructor_MST()"
+    );
+
+    if (this.currentToken.class === "this") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === ".") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.Dec()) {
+          if (this.constructor_MST()) {
+            return true;
+          }
+        }
+      } else if (this.CSST()) {
+        if (this.constructor_MST()) {
+          return true;
+        }
+      } else if (this.currentToken.lexeme === "}") {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  Abstract_class() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Abstract_class()"
+    );
+
+  
+      if (this.currentToken.lexeme === "abstract") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.lexeme === "class") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.class === "VARIABLE") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.currentToken.lexeme === "{") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.Abstract_body()) {
+                return true;
+              }
+            }
+          }
+        }
+      
+    } else {
+      return false;
+    }
+  }
+
+  Abstract_body() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Abstract_body()"
+    );
+
+    if (this.Abstract_inside()) {
+      if (this.currentToken.lexeme === "}") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        return true;
+      }
+    }
+    if (this.currentToken.lexeme === "}") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Abstract_inside() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Abstract_inside()"
+    );
+    if (this.Abstract_func_types()) {
+      return true;
+    } else if (this.object_dec()) {
+      return true;
+    } else if (this.class_Dec()) {
+      return true;
+    } else if (this.Abstract_func_types()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Abstract_func_types() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Abstract_func_types()"
+    );
+
+    if (this.Abstract_method()) {
+      return true;
+    } else if (this.class_method()) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  Abstract_method() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Abstract_method()"
+    );
+
+    if (this.currentToken.type === "DataType") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.lexeme === "(") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.classVarDeclaration()) {
+            if (this.currentToken.lexeme === ")") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.currentToken.lexeme === ";") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+              }
+            }
+          } else if (this.currentToken.lexeme === ")") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.currentToken.lexeme === "{") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.CMST()) {
+                if (this.currentToken.lexeme === "}") {
+                  this.currentIndex += 1;
+                  this.currentToken = this.lexer[this.currentIndex];
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
+
+  object_class() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "object_class()"
+    );
+
+    if (this.currentToken.class === "VARIABLE") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
+        this.currentToken = this.lexer[this.currentIndex];
+        if (this.currentToken.lexeme === "=") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.currentToken.class === "VARIABLE") {
+            this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if (this.currentToken.lexeme === "(") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.Expression()) {
+                if (this.currentToken.lexeme === ")") {
+                  this.currentIndex += 1;
+                  this.currentToken = this.lexer[this.currentIndex];
+                  if (this.currentToken.lexeme === ";") {
+                    this.currentIndex += 1;
+                    this.currentToken = this.lexer[this.currentIndex];
+                    return true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } else {
+      return false;
+    }
+  }
   Expression() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Expression()"
+    );
+
     if (this.compound_Ass()) {
       if (this.Expression1()) {
         return true;
       }
-    }else{    return false; }
+    } else if (this.currentToken.lexeme === ")") {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   Expression1() {
-    // follow set included
-    if (this.currentToken.type === "Operator") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Expression1()"
+    );
+
+    if (
+      this.currentToken.class === "COMPOUND_EQUAL_PLUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MINUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_DIVIDE" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MULTIPLY"
+    ) {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.compound_Ass()) {
@@ -315,7 +3004,13 @@ class Parser {
           return true;
         }
       }
-    } else if (this.currentToken.lexeme === ")") {
+    } else if (this.currentToken.type === "Operator") {
+      return true;
+    } 
+    // else if (this.currentToken.type === "Keyword") {
+    //   return true;
+    // } 
+    else if (this.currentToken.lexeme === "!") {
       return true;
     } else if (this.currentToken.lexeme === "]") {
       return true;
@@ -323,26 +3018,94 @@ class Parser {
       return true;
     } else if (this.currentToken.lexeme === ";") {
       return true;
-    } else if (this.currentToken.lexeme === ":") {
+    } else if (this.currentToken.lexeme === ")") {
       return true;
+    } else if (this.currentToken.lexeme === "(") {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.const()) {
+      return true;
+    } else if (this.currentToken.lexeme === ".") {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   compound_Ass() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "compound_Ass()"
+    );
+
     if (this.Assignment_opt()) {
       if (this.compound_Ass1()) {
         return true;
       }
-    }else{
-
-    return false;
+    } else {
+      return false;
     }
   }
+  followOE() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "followOE()"
+    );
 
+    if (this.currentToken.type === "Operator") {
+      return true;
+    } else if (this.currentToken.type === "Keyword") {
+      return true;
+    } else if (this.currentToken.lexeme === "!") {
+      return true;
+    } else if (this.currentToken.lexeme === "create") {
+      return true;
+    } else if (this.currentToken.lexeme === "]") {
+      return true;
+    } else if (this.currentToken.lexeme === ",") {
+      return true;
+    } else if (this.currentToken.lexeme === ";") {
+      return true;
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
+    } else if (this.currentToken.lexeme === ")") {
+      // this.currentIndex += 1;
+      // this.currentToken = this.lexer[this.currentIndex];
+
+      return true;
+    } else if (this.currentToken.lexeme === "(") {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.constfollow()) {
+      return true;
+    } else if (this.currentToken.lexeme === ".") {
+      return true;
+    }
+  }
   compound_Ass1() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "compound_Ass1()"
+    );
+
     if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
-      
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Assignment_opt()) {
@@ -352,22 +3115,45 @@ class Parser {
       }
     } else if (this.currentToken.type === "Operator") {
       return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   Assignment_opt() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Assignment_opt()"
+    );
 
     if (this.NOT()) {
       if (this.Assignment_opt1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   Assignment_opt1() {
-    if (this.currentToken.class === "Not") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Assignment_opt1()"
+    );
+
+    if (this.currentToken.class === "NOT") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.NOT()) {
@@ -375,22 +3161,46 @@ class Parser {
           return true;
         }
       }
-    } else if (this.currentToken.class === "assignment_operator") {
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
       return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   NOT() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "NOT()"
+    );
+
     if (this.OR()) {
       if (this.NOT1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   NOT1() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "NOT1()"
+    );
+
     if (this.currentToken.class === "OR") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
@@ -401,20 +3211,46 @@ class Parser {
       }
     } else if (this.currentToken.class === "NOT") {
       return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   OR() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "OR()"
+    );
+
     if (this.AND()) {
       if (this.OR1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   OR1() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "OR1()"
+    );
+
     if (this.currentToken.class === "AND") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
@@ -425,21 +3261,49 @@ class Parser {
       }
     } else if (this.currentToken.class === "OR") {
       return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   AND() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "AND()"
+    );
+
     if (this.ROP()) {
       if (this.AND1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   AND1() {
-    if (this.currentToken.class === "ROP") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "AND1()"
+    );
+
+    if (this.currentToken.class === "RELATIONAL_OPERATOR") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.ROP()) {
@@ -449,23 +3313,51 @@ class Parser {
       }
     } else if (this.currentToken.class === "AND") {
       return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   ROP() {
-   
-    if (this.PM()) {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "ROP()"
+    );
 
+    if (this.PM()) {
       if (this.ROP1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   ROP1() {
-    if (this.currentToken.class === "PM") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "ROP1()"
+    );
+
+    if (this.currentToken.class === "PLUS_MINUS") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.PM()) {
@@ -473,23 +3365,57 @@ class Parser {
           return true;
         }
       }
-    } else if (this.currentToken.class === "ROP") {
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
       return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.currentToken.class === "PLUS_MINUS") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   PM() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "PM()"
+    );
+
     if (this.MDM()) {
       if (this.PM1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   PM1() {
-    if (this.currentToken.class === "MDM") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "PM1()"
+    );
+
+    if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.MDM()) {
@@ -497,23 +3423,73 @@ class Parser {
           return true;
         }
       }
-    } else if (this.currentToken.class === "PM") {
+    } else if (this.currentToken.class === "PLUS_MINUS") {
       return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   MDM() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "MDM()"
+    );
+
     if (this.P()) {
       if (this.MDM1()) {
         return true;
       }
+    } else if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
+      return true;
+    } else if (this.currentToken.class === "PLUS_MINUS") {
+      return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   MDM1() {
-    if (this.currentToken.class === "P") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "MDM1()"
+    );
+
+    if (this.currentToken.lexeme === "+") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.P()) {
@@ -521,23 +3497,59 @@ class Parser {
           return true;
         }
       }
-    } else if (this.currentToken.class === "MDM") {
+    } else if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
       return true;
+    } else if (this.currentToken.class === "PLUS_MINUS") {
+      return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   P() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "P()"
+    );
+
     if (this.Dec()) {
       if (this.P1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   P1() {
-    if (this.currentToken.class === "--") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "P1()"
+    );
+
+    if (this.currentToken.lexeme === "^") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Dec()) {
@@ -545,64 +3557,237 @@ class Parser {
           return true;
         }
       }
-    } else if (this.currentToken.class === "P") {
+    } else if (this.currentToken.lexeme === "+") {
       return true;
+    } else if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
+      return true;
+    } else if (this.currentToken.class === "PLUS_MINUS") {
+      return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   Dec() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Dec()"
+    );
+
     if (this.F()) {
       if (this.Dec1()) {
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   Dec1() {
-    if (this.currentToken.class === "++") {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "Dec1()"
+    );
+
+    if (this.currentToken.lexeme === "++") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
+
       if (this.F()) {
         if (this.Dec1()) {
           return true;
         }
       }
-    } else if (this.currentToken.class === "--") {
+    } else if (this.currentToken.lexeme === "--") {
       return true;
+    } else if (this.currentToken.lexeme === "+") {
+      return true;
+    } else if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
+      return true;
+    } else if (this.currentToken.class === "PLUS_MINUS") {
+      return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (this.followOE()) {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
+  constfollow() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "constfollow()"
+    );
 
+    if (this.currentToken.class === "INTEGER") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "integer found !"
+      );
+      return true;
+    } else if (this.currentToken.class === "BOOLEAN") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "BOOLEAN found !"
+      );
+
+      return true;
+    } else if (this.currentToken.class === "STRING") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "STRING found !"
+      );
+
+      return true;
+    } else if (this.currentToken.class === "FLOATING_POINT") {
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "FLOATING_NUMBER found !"
+      );
+
+      return true;
+    } else {
+      return false;
+    }
+  }
   const() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "const()"
+    );
+
     if (this.currentToken.class === "INTEGER") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      console.log("integer found !");
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "integer found !"
+      );
+      return true;
     } else if (this.currentToken.class === "BOOLEAN") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      console.log("BOOLEAN found !");
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "BOOLEAN found !"
+      );
 
       return true;
     } else if (this.currentToken.class === "STRING") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      console.log("STRING found !");
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "STRING found !"
+      );
 
       return true;
-    } else if (this.currentToken.class === "FLOATING_NUMBER") {
+    } else if (this.currentToken.class === "FLOATING_POINT") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      console.log("FLOATING_NUMBER found !");
+      console.log(
+        this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "FLOATING_NUMBER found !"
+      );
 
       return true;
+    } else {
+      return false;
     }
   }
 
   F() {
-   
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "F()"
+    );
+
     if (this.const()) {
       return true;
     } else if (this.currentToken.lexeme === "(") {
@@ -625,330 +3810,170 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.F2()) {
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "F2 REACHED!!!"
+        );
         return true;
       }
+    } else {
+      return false;
     }
-    return false;
   }
 
   F2() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "F2()"
+    );
+
     if (this.object_call()) {
       return true;
     } else if (this.inc_dec()) {
       return true;
-    } else if (this.Array_def()) {
-      return true;
-    } else if (this.Arr_func()) {
-      return true;
-    } else if (this.Array_call()) {
-      return true;
     } else if (this.func_call()) {
       return true;
-    } else if (this.currentToken.lexeme === "++") {
+    }
+    // else if (this.Arr_func()) {
+    //   return true;
+    // }
+    else if (this.Array_call()) {
       return true;
-    }
-  }
-
-  // Parser   for F2
-  parseF2() {
-    if (this.currentToken.type === "(") {
-      this.match("(");
-      // Assuming F2 is always followed by a valid expression
-      this.parseOE();
-      this.match(")");
+    } else if (this.currentToken.class === "INCREMENT_DECREMENT") {
+      return true;
+    } else if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
+      return true;
+    } else if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      return true;
+    } else if (this.currentToken.class === "AND") {
+      return true;
+    } else if (this.currentToken.class === "OR") {
+      return true;
+    } else if (this.currentToken.class === "NOT") {
+      return true;
+    } else if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      return true;
+    } else if (
+      this.currentToken.class === "COMPOUND_EQUAL_PLUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MINUS" ||
+      this.currentToken.class === "COMPOUND_EQUAL_DIVIDE" ||
+      this.currentToken.class === "COMPOUND_EQUAL_MULTIPLY"
+    ) {
+      return true;
+    } else if (this.currentToken.class === "VARIABLE") {
+      return true;
+    } else if (this.currentToken.lexeme === "(") {
+      return true;
+    } else if (this.currentToken.lexeme === "!") {
+      return true;
+    } else if (this.constfollow()) {
+      return true;
     } else {
-      console.error(`Unexpected token for F2: ${this.currentToken.type}`);
+      return false;
     }
   }
 
-  // Parser   for CycleLoop
-  parseCycleLoop() {
-    while (this.currentToken.lexeme === "}") {
-      if (this.currentToken.class === "CYCLE") {
-        this.firstSets.loop.has(this.currentToken.class);
-      } else {
-        console.error(
-          `Unexpected token for CycleLoop: ${this.currentToken.type}`
-        );
-      }
-       this.currentIndex += 1;
+  parseInterface() {
+    if (this.currentToken.lexeme === "interface") {
+      this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-    }
-  }
-
-  // Parser   for IfElse
-  parseIfElse() {
-    while (this.currentToken.lexeme === "end") {
-      if (this.currentToken.class === "(") {
-        this.parseOE();
-      } else if (this.currentToken.class === "{") {
-        this.parseSST();
-      } else if (this.currentToken.class === "{") {
-         this.currentIndex += 1;
+      if (this.currentToken.class === "VARIABLE") {
+        this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
-        this.currentToken = this.lexer[this.currentIndex];
-        break;
-      } else {
-        console.error(`Unexpected token for IfElse: ${this.currentToken.type}`);
-      }
-       this.currentIndex += 1;
-      this.currentToken = this.lexer[this.currentIndex];
-    }
-  }
-
-  parseAbstract() {
-    if (this.firstSets.abs_class.has(this.currentToken.type)) {
-      this.match("abstract");
-      // Assuming the rest of the abstract class definition follows your grammar rules
-    } else {
-      console.error(`Unexpected token for Abstract: ${this.currentToken.type}`);
-    }
-  }
-
-  // Parser   for
-  parse() {
-    if (this.firstSets.func_def.has(this.currentToken.type)) {
-      this.match("DataType"); // Assuming return type, adjust as needed
-      this.match("ID"); // Assuming   name, adjust as needed
-      // Assuming the rest of the   definition follows your grammar rules
-    } else {
-      console.error(`Unexpected token for  : ${this.currentToken.type}`);
-    }
-  }
-
-  // Parser   for Cases
-  parseCases() {
-    if (this.firstSets.cases.has(this.currentToken.type)) {
-      this.parseOE(); // Assuming OE is the expression inside cases
-      // Assuming the rest of the cases statement follows your grammar rules
-    } else {
-      console.error(`Unexpected token for Cases: ${this.currentToken.type}`);
-    }
-  }
-
-  // Parser   for Array
-  parseArray() {
-    if (this.firstSets.array.has(this.currentToken.type)) {
-      this.match("[");
-      // Assuming the rest of the array definition follows your grammar rules
-    } else {
-      console.error(`Unexpected token for Array: ${this.currentToken.type}`);
-    }
-  }
-
-  // Parser   for Objects
-  parseObjects() {
-    // Assuming objects can be a list of key-value pairs, adjust as needed
-    while (this.firstSets.obj_dec.has(this.currentToken.type)) {
-      this.parseObjDec();
-    }
-  }
-  parseObjRef() {
-    if (this.firstSets.obj_ref.has(this.currentToken.lexeme)) {
-      if (this.currentToken.lexeme === "=") {
-        // Handle object assignment
-        this.match("=");
-        this.parseObject();
-      } else if (this.currentToken.lexeme === "(") {
-        // Handle   call
-        this.parseFunctionCall();
-      } else if (this.currentToken.lexeme === "[") {
-        // Handle array element access
-        this.parseArrayAccess();
-      } else if (this.currentToken.lexeme === ".") {
-        // Handle property access
-        this.parsePropertyAccess();
-      } else if (this.currentToken.lexeme === "null") {
-        // Handle null assignment
-        this.match("null");
-      }
-    } else {
-      console.error(
-        `Unexpected token for Object Reference: ${this.currentToken.lexeme}`
-      );
-    }
-  }
-
-  parseObjDec() {
-    // Implement parsing of object declarations
-    // Example: key1: value1, key2: value2, ...
-    if (this.currentToken.type === "Variable") {
-      this.match("Variable");
-      this.match(":");
-      this.parseValue();
-      if (this.currentToken.lexeme === ",") {
-        this.match(",");
-        this.parseObjDec();
-      }
-    } else {
-      console.error(
-        `Unexpected token for Object Declaration: ${this.currentToken.lexeme}`
-      );
-    }
-  }
-  parseExpression() {
-    this.parseEOE();
-  }
-
-  parseEOE() {
-    this.parseCompAss();
-    this.parseOEPrime();
-  }
-
-  parseOEPrime() {
-    if (this.currentToken.type === "OR") {
-      this.match("OR");
-      this.parseCompAss();
-      this.parseOEPrime();
-    }
-  }
-
-  parseCompAss() {
-    this.parseAssOpr();
-    this.parseCompAssPrime();
-  }
-
-  parseCompAssPrime() {
-    if (this.currentToken.type === "ASSIGNMENT_EQUAL") {
-      this.match("ASSIGNMENT_EQUAL");
-      this.parseAssOpr();
-      this.parseCompAssPrime();
-    }
-  }
-
-  parseAssOpr() {
-    if (this.currentToken.type === "OR") {
-      this.match("OR");
-      this.parseAssOprPrime();
-    }
-  }
-
-  parseAssOprPrime() {
-    if (this.currentToken.type === "OR") {
-      this.match("OR");
-      this.parseAssOpr();
-    }
-  }
-
-  parseValue() {
-    // Implement parsing of values within key-value pairs
-    // Example: value1, value2, ...
-    if (this.firstSets.value.has(this.currentToken.type)) {
-      // Handle parsing of values based on your language's syntax rules.
-      // For example, if you expect literals, variables, or   calls as values.
-      // You'll need to define the specifics based on your language's grammar.
-    } else {
-      console.error(`Unexpected token for Value: ${this.currentToken.lexeme}`);
-    }
-  }
-
-  parseFunctionCall() {
-    // Implement   call parsing
-    // Example:  _name(arguments)
-    if (this.currentToken.lexeme === "(") {
-      this.match("(");
-      this.parseArguments();
-      this.match(")");
-    } else {
-      console.error(`Unexpected token for   Call: ${this.currentToken.lexeme}`);
-    }
-  }
-
-  parseObject() {
-    // Implement object parsing
-    // Example: { key1: value1, key2: value2 }
-    if (this.currentToken.lexeme === "{") {
-      this.match("{");
-      // Parse key-value pairs
-      while (this.currentToken.lexeme !== "}") {
-        this.parseKeyValuePair();
-        if (this.currentToken.lexeme === ",") {
-          this.match(",");
+        if (this.currentToken.lexeme === "{") {
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex];
+          if (this.interfacebody()) {
+            if (this.currentToken.lexeme === "}") {
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              return true;
+            }
+          }
         }
       }
-      this.match("}");
     } else {
-      console.error(`Unexpected token for Object: ${this.currentToken.lexeme}`);
+      return false;
     }
   }
 
-  parseKeyValuePair() {
-    // Implement parsing of key-value pairs within an object
-    // Example: key: value
-    if (this.currentToken.type === "Variable") {
-      this.match("Variable");
-      this.match(":");
-      this.parseValue();
+  interfacebody() {
+    if (this.Abstract_method()) {
+      return true;
+    } else if (this.classVarDeclaration()) {
+      return true;
     } else {
-      console.error(
-        `Unexpected token for Key-Value Pair: ${this.currentToken.lexeme}`
-      );
+      return false;
     }
   }
-  parsePropertyAccess() {
-    // Implement property access parsing
-    // Example: object.property
-    if (this.currentToken.lexeme === ".") {
-      this.match(".");
-      if (this.currentToken.type === "Variable") {
-        this.match("Variable");
-      } else {
-        console.error(
-          `Unexpected token for Property Access: ${this.currentToken.lexeme}`
-        );
-      }
-    } else {
-      console.error(
-        `Unexpected token for Property Access: ${this.currentToken.lexeme}`
-      );
-    }
-  }
-  parseAccessModifier() {
-    // Implement access modifier parsing
-    // Example: public, private, protected
-    if (
-      this.currentToken.lexeme === "public" ||
-      this.currentToken.lexeme === "private" ||
-      this.currentToken.lexeme === "protected"
-    ) {
-      this.match(this.currentToken.lexeme);
-    } else {
-      console.error(
-        `Unexpected token for Access Modifier: ${this.currentToken.lexeme}`
-      );
-    }
-  }
-  parseInterface() {
-    if (this.firstSets.init_interface.has(this.currentToken.lexeme)) {
-      // Handle interface parsing
-      // You'll need to define the syntax for your language's interfaces.
-    } else {
-      console.error(
-        `Unexpected token for Interface: ${this.currentToken.lexeme}`
-      );
-    }
-  }
-
-  // Add more parser  s for other non-terminals based on your grammar rules
 
   // Entry point for parsing
   parse() {
-    if (!this.lexer || !Array.isArray(this.lexer) || this.lexer.length === 0) {
-      console.error("Invalid lexer or tokens provided for parsing.");
-      return;
-    }
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "parse()"
+    );
 
     // Initialize the current token
     this.currentToken = this.lexer[this.currentIndex];
-    console.log(this.currentToken);
+    if (this.parseS()) {
+      console.log("success");
+      console.log("NO SYNTAX ERROR!!");
+      console.log("HAPPY CODING :) !!");
+    } else if (this.currentToken.type === "EOF") {
+      console.log("NO SYNTAX ERROR!!");
+      console.log("HAPPY CODING :) !!");
+    } else {
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme + " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber);
 
-    this.parseS();
-
-    // // Check if there are any remaining tokens
-    // if (this.currentToken.type !== 'EOF') {
-    //   console.error(`Unexpected token: ${this.currentToken.type}`);
-    // }
+      console.log(
+        "SYNTAX ERROR  " +
+          this.currentToken.class +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber
+      );
+    }
   }
+
+  // addVariableToSymbolTable(varName, varType) {
+  //   if (this.symbolTable.inCurrentScope(varName)) {
+  //     // Variable with the same name already declared in the current scope, raise an error
+  //     console.error(`Error: Variable '${varName}' already declared in the current scope.`);
+  //     // Handle the error, possibly halt further analysis
+  //   } else {
+  //     // Add the variable to the symbol table
+  //     this.symbolTable.addVariable(varName, varType);
+  //   }
+  // }
+
+  // typeCheck(expression, expectedType) {
+  //   const actualType = getTypeOfExpression(expression); // Implement a function to get the type of an expression
+  //   if (actualType !== expectedType) {
+  //     // Type mismatch error
+  //     console.error(`Error: Type mismatch. Expected ${expectedType}, but got ${actualType}.`);
+  //     // Handle the error, possibly halt further analysis
+  //   }
+  // }
 }
 
 export default Parser;
