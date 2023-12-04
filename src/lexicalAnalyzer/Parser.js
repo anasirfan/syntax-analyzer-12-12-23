@@ -1,19 +1,38 @@
 // Assume Grammar is properly implemented and provides firstSets and followSets
 import Grammar from "./Grammar";
-import SemanticAnalyzer from "./semantic_analyzer";
+// import SemanticAnalyzer from "./semantic_analyzer";
 import SymbolTable from "./symbol_table";
+import DataType from "../lexemes/DataType";
+import { MemberType } from "./semantic_analyzer";
+import {
+  DefinitionTableEntry,
+  ScopeTableEntry,
+  MemberTableEntry,
+  TypeInfo,
+  TypeCheckingInfo,
+} from './semantic_analyzer';
 
 class Parser {
   constructor(lexer) {
     console.log(lexer);
     this.lexer = lexer;
+    this.functionData = new MemberType();
     this.currentIndex = 0;
     this.currentToken = this.lexer[this.currentIndex];
     this.firstSets = new Grammar().firstSets;
     this.followSets = new Grammar().followSets;
     this.SymbolTable = new SymbolTable();
-    this.SemanticAnalyzer = new SemanticAnalyzer();
+    this.ScopeTableEntry = new ScopeTableEntry();
+    this.DefinitionTableEntry = new DefinitionTableEntry();
+    this.MemberTableEntry = new MemberTableEntry();
+    this.datatypecheck = new DataType();
+    // this.SemanticAnalyzer = new SemanticAnalyzer();
   }
+  displaySemanticError(msg, showLineNumber = true) {
+    throw new SyntaxError(`Semantic error ${this.currentToken.lineNumber ? `at line# ${this.currentToken.lineNumber}` : ''} :\n  ${msg}`);
+    console.log('-'.repeat(70));
+}
+
 
   parseS() {
     console.log(
@@ -26,6 +45,7 @@ class Parser {
         "parseS()"
     );
 
+
     if (this.currentToken && this.currentToken.class) {
       if (
         this.currentToken.lexeme !== "EOF" &&
@@ -33,7 +53,7 @@ class Parser {
         this.currentToken.lexeme !== "interface" &&
         this.currentToken.lexeme !== "class" &&
         this.parseSST()
-      ){
+      ) {
         console.log(
           this.currentToken.class +
             " " +
@@ -46,7 +66,6 @@ class Parser {
         if (this.parseS()) {
           return true;
         }
-
       } else if (this.Access_modifier()) {
         console.log(
           this.currentToken.class +
@@ -62,14 +81,14 @@ class Parser {
             return true;
           }
         } else if (this.currentToken.lexeme === "abstract") {
-          if(this.Abstract_class()){
+          if (this.Abstract_class()) {
             if (this.parseS()) {
               return true;
             }
           }
-        } 
-      }  else if (this.currentToken.lexeme === "interface") {
-        if(this.parseInterface()){
+        }
+      } else if (this.currentToken.lexeme === "interface") {
+        if (this.parseInterface()) {
           return true;
         }
       } else if (this.currentToken.type === "EOF") {
@@ -99,10 +118,7 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-      
-    } 
-
-   else if (this.parseDeclaration()) {
+    } else if (this.parseDeclaration()) {
       return true;
     } else if (this.parseTryExcept()) {
       return true;
@@ -118,21 +134,17 @@ class Parser {
       return true;
     } else if (this.parseCycleLoop()) {
       return true;
-    } 
-    
-    else if (this.TS()) {
+    } else if (this.TS()) {
       if (this.Expression()) {
         if (this.currentToken.lexeme === ";") {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           return true;
         }
-      //  throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
+        //  throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
       }
-    }else if(this.Expression()){
+    } else if (this.Expression()) {
       return true;
-
     } else if (this.const()) {
       return true;
     } else if (this.parseContinue()) {
@@ -216,12 +228,11 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (
       this.const() ||
       this.currentToken.lexeme === "(" ||
-      this.currentToken.lexeme === "!" 
-      || this.currentToken.class === "VARIABLE"
+      this.currentToken.lexeme === "!" ||
+      this.currentToken.class === "VARIABLE"
     ) {
       return true;
     } else {
@@ -300,9 +311,7 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.lexeme === ";") {
-     
       return true;
     } else {
       return false;
@@ -344,15 +353,11 @@ class Parser {
           );
           return true;
         }
-       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
+        throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
       }
-    } 
-     else if (this.currentToken.lexeme === ";") {
-    
+    } else if (this.currentToken.lexeme === ";") {
       return true;
     } else if (this.currentToken.lexeme === ",") {
-    
       return true;
     } else {
       return false;
@@ -394,6 +399,8 @@ class Parser {
       return true;
     } else if (this.currentToken.lexeme === ";") {
       return true;
+    } else if (this.currentToken.lexeme === "EOF") {
+      return true;
     } else {
       return false;
     }
@@ -423,9 +430,7 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.lexeme === ";") {
-   
       return true;
     } else {
       return false;
@@ -447,6 +452,7 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.class === "DataTypes") {
+        this.ScopeTableEntry.type = this.currentToken.lexeme;
         console.log(
           this.currentToken.class +
             " " +
@@ -459,6 +465,15 @@ class Parser {
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.currentToken.class === "VARIABLE") {
+          
+        this.ScopeTableEntry.name = this.currentToken.lexeme;
+        if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+          this.displaySemanticError("REDECLARATION ERROR");
+          this.SymbolTable.print_scope_table();
+
+        }
+        
+
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           console.log(
@@ -490,17 +505,19 @@ class Parser {
                   " ON LINE - " +
                   this.currentToken.lineNumber +
                   " " +
-                  "init parsing list found!"
+                  "init parsing list  found!"
               );
 
-              return true;
+              if (this.currentToken.lexeme === ";") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                return true;
+              }
             }
-          } else if (this.currentToken.lexeme === ";") {
-            return true;
           }
         }
       }
-       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
+      //  throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
     } else if (this.currentToken.lexeme === ")") {
       return true;
     } else {
@@ -571,7 +588,6 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.lexeme === ";") {
       console.log("semi colon found!");
       this.currentIndex += 1;
@@ -712,6 +728,7 @@ class Parser {
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.body()) {
+              this.SymbolTable.destroy_scope();
               if (this.else()) {
                 return true;
               }
@@ -719,8 +736,7 @@ class Parser {
           }
         }
       }
-      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
+      // throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
     } else {
       return false;
     }
@@ -736,7 +752,9 @@ class Parser {
         " " +
         "body()"
     );
-
+    const current_scope = this.SymbolTable.create_scope();
+  
+  this.ScopeTableEntry.scope = current_scope;
     if (this.parseSST()) {
       return true;
     } else if (this.currentToken.lexeme === "{") {
@@ -749,8 +767,7 @@ class Parser {
           return true;
         }
       }
-      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
+      // throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
     } else {
       return false;
     }
@@ -774,7 +791,6 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.lexeme === "}") {
       return true;
     } else {
@@ -800,7 +816,6 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.type === "Datatype") {
       return true;
     } else if (this.currentToken.lexeme === "return") {
@@ -862,7 +877,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
@@ -890,28 +904,28 @@ class Parser {
             console.log("semi col found in cycle");
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
-            if(this.Expression()){
-              if(this.currentToken.lexeme === ";"){
+            if (this.Expression()) {
+              if (this.currentToken.lexeme === ";") {
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
-              
-            if (this.currentToken.class === "VARIABLE") {
-              console.log("VARIABLE  found in cycle");
 
-              this.currentIndex += 1;
-              this.currentToken = this.lexer[this.currentIndex];
-              if (this.currentToken.lexeme === "++") {
-                this.currentIndex += 1;
-                this.currentToken = this.lexer[this.currentIndex];
-                console.log("++  found in cycle");
-                if (this.currentToken.lexeme === ")") {
+                if (this.currentToken.class === "VARIABLE") {
+                  console.log("VARIABLE  found in cycle");
+
                   this.currentIndex += 1;
                   this.currentToken = this.lexer[this.currentIndex];
-                  return true;
+                  if (this.currentToken.lexeme === "++") {
+                    this.currentIndex += 1;
+                    this.currentToken = this.lexer[this.currentIndex];
+                    console.log("++  found in cycle");
+                    if (this.currentToken.lexeme === ")") {
+                      this.currentIndex += 1;
+                      this.currentToken = this.lexer[this.currentIndex];
+                      return true;
+                    }
+                  }
                 }
               }
-            }
-          }
             }
           }
         }
@@ -925,7 +939,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.type === "Datatype") {
       return true;
     } else if (this.currentToken.lexeme === "return") {
@@ -990,7 +1003,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
@@ -1024,12 +1036,20 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
   }
   tryRest() {
+    console.log(
+      this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "tryRest()"
+    );
     if (this.currentToken.lexeme === "catch") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
@@ -1049,7 +1069,9 @@ class Parser {
                 if (this.currentToken.lexeme === "}") {
                   this.currentIndex += 1;
                   this.currentToken = this.lexer[this.currentIndex];
-                  return true;
+                  if (this.tryRest()) {
+                    return true;
+                  }
                 }
               }
             }
@@ -1057,7 +1079,8 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
+    } else if (this.FollowSST()) {
+      return true;
     } else {
       return false;
     }
@@ -1087,7 +1110,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
@@ -1116,7 +1138,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     }
   }
 
@@ -1144,7 +1165,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
@@ -1162,9 +1182,15 @@ class Parser {
     );
 
     if (this.currentToken.type === "DataType") {
+      this.functionData.is_function = true;
+      this.functionData.func_return_type = this.currentToken.lexeme;
+      this.ScopeTableEntry.type = this.currentToken.lexeme
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.class === "VARIABLE") {
+
+      this.functionData.func_name = this.currentToken.lexeme;
+
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.currentToken.lexeme === "(") {
@@ -1181,7 +1207,13 @@ class Parser {
                 "expression comp"
             );
             if (this.currentToken.lexeme === ")") {
-              console.log("closing at func")
+              console.log(this.functionData)
+             this.ScopeTableEntry.type = this.functionData.toString(this.functionData.is_function)
+             this.ScopeTableEntry.name = this.functionData.func_name
+             this.ScopeTableEntry.scope -=1
+             this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)
+
+              console.log("closing at func");
               this.currentIndex += 1;
               this.currentToken = this.lexer[this.currentIndex];
               if (this.func_body()) {
@@ -1207,7 +1239,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
@@ -1223,9 +1254,18 @@ class Parser {
         " " +
         "PARAMLIST()"
     );
+    const current_scope = this.SymbolTable.create_scope();
+  
+    this.ScopeTableEntry.scope = current_scope;
 
     if (this.type()) {
       if (this.currentToken.class === "VARIABLE") {
+        this.ScopeTableEntry.name = this.currentToken.lexeme
+        if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+          this.displaySemanticError("REDECLARATION ERROR");
+          this.SymbolTable.print_scope_table();
+
+        }
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.PL2()) {
@@ -1233,10 +1273,13 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
-    } else if (this.currentIndex.lexeme === ")") {
+    } else if (this.currentToken
+      .lexeme === ")") {
+      
       return true;
     } else {
+      console.log("paramlist () false")
+
       return false;
     }
   }
@@ -1255,11 +1298,15 @@ class Parser {
       this.currentToken.class === "VARIABLE" ||
       this.currentToken.type === "DataType"
     ) {
+      this.ScopeTableEntry.type = this.currentToken.lexeme
+      this.functionData.func_param_type_list.push(this.currentToken.lexeme)
+
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
     } 
-     else {
+    else {
+      console.log("type () false")
       return false;
     }
   }
@@ -1278,6 +1325,12 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
       if (this.type()) {
         if (this.currentToken.class === "VARIABLE") {
+          this.ScopeTableEntry.name = this.currentToken.lexeme
+          if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+            this.displaySemanticError("REDECLARATION ERROR");
+            this.SymbolTable.print_scope_table();
+  
+          }
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.PL2()) {
@@ -1286,10 +1339,12 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.lexeme === ")") {
+      console.log("PL2 ")
       return true;
     } else {
+      console.log("PL2 () false")
+
       return false;
     }
   }
@@ -1304,7 +1359,7 @@ class Parser {
         " " +
         "func_body()"
     );
-
+      this.ScopeTableEntry.scope +=1
     if (this.currentToken.lexeme === "{") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
@@ -1316,7 +1371,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else if (this.currentToken.lexeme === "else") {
       return true;
     } else if (this.currentToken.type === "Datatype") {
@@ -1387,7 +1441,8 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
+    } else if (this.currentToken.lexeme === ";") {
+      return true;
     } else {
       return false;
     }
@@ -1407,7 +1462,6 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
@@ -1439,7 +1493,6 @@ class Parser {
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-
     } else {
       return false;
     }
@@ -1455,19 +1508,15 @@ class Parser {
         " " +
         "inside_Arr_body()"
     );
-     if(this.body_Arr()){
-      if(this.a()){
-
-        return true;
-      }
-    }
-
-    else if (this.Expression()) {
+    if (this.body_Arr()) {
       if (this.a()) {
         return true;
       }
-    } 
-    else if (this.currentToken.lexeme === "]") {
+    } else if (this.Expression()) {
+      if (this.a()) {
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "]") {
       return true;
     } else {
       return false;
@@ -2091,12 +2140,26 @@ class Parser {
         "Class()"
     );
 
-   
-      if (this.currentToken.lexeme === "class") {
+    if (this.currentToken.lexeme === "class") {
+      this.DefinitionTableEntry.type = this.currentToken.lexeme;
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+
+      if (this.currentToken.class === "VARIABLE") {
+        this.DefinitionTableEntry.name = this.currentToken.lexeme;
+        console.log(
+          this.currentToken.class +
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "var found!"
+        );
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
 
-        if (this.currentToken.class === "VARIABLE") {
+        if (this.Inheritance()) {
           console.log(
             this.currentToken.class +
               " " +
@@ -2104,31 +2167,16 @@ class Parser {
               " ON LINE - " +
               this.currentToken.lineNumber +
               " " +
-              "var found!"
+              "inh true"
           );
-          this.currentIndex += 1;
-          this.currentToken = this.lexer[this.currentIndex];
-
-          if (this.Inheritance()) {
-            console.log(
-              this.currentToken.class +
-                " " +
-                this.currentToken.lexeme +
-                " ON LINE - " +
-                this.currentToken.lineNumber +
-                " " +
-                "inh true"
-            );
-            if(this.opt_imp()){
+          if (this.opt_imp()) {
             if (this.class_body()) {
               return true;
             }
           }
         }
-        }
-        throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-      
-
+      }
+      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
     } else {
       return false;
     }
@@ -2146,6 +2194,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "AccessModifiers") {
+      this.DefinitionTableEntry.access_modifier = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
@@ -2176,6 +2225,7 @@ class Parser {
     );
 
     if (this.currentToken.lexeme === "extends") {
+      
       console.log(
         this.currentToken.class +
           " " +
@@ -2188,6 +2238,7 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.class === "VARIABLE") {
+        this.DefinitionTableEntry.interface_list.push(this.currentToken.lexeme)
         console.log(
           this.currentToken.class +
             " " +
@@ -2205,10 +2256,9 @@ class Parser {
           return true;
         }
       }
-    } else if(this.currentToken.lexeme === "implements"){
+    } else if (this.currentToken.lexeme === "implements") {
       return true;
-    }
-     else if (this.currentToken.lexeme === "{") {
+    } else if (this.currentToken.lexeme === "{") {
       return true;
     } else {
       return false;
@@ -2240,6 +2290,7 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
 
       if (this.currentToken.class === "VARIABLE") {
+        this.DefinitionTableEntry.implements_list.push(this.currentToken.lexeme)
         console.log(
           this.currentToken.class +
             " " +
@@ -2253,16 +2304,19 @@ class Parser {
         this.currentToken = this.lexer[this.currentIndex];
         if (this.opt_imp()) {
           return true;
-        } 
+        }
       }
-      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme + " " +
-      this.currentToken.lexeme +
-      " ON LINE - " +
-      this.currentToken.lineNumber);
-    } else if(this.currentToken.lexeme === "{"){
+      throw new SyntaxError(
+        "INVALID SYNTAX: " +
+          this.currentToken.lexeme +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber
+      );
+    } else if (this.currentToken.lexeme === "{") {
       return true;
-    }
-     else {
+    } else {
       return false;
     }
   }
@@ -2278,16 +2332,7 @@ class Parser {
         "class_body()"
     );
 
-    console.log(
-      this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "class body at " +
-        this.currentToken.lexeme
-    );
+    this.SymbolTable.insert_into_definition_table(this.DefinitionTableEntry)
 
     if (this.currentToken.lexeme === "{") {
       this.currentIndex += 1;
@@ -2302,20 +2347,19 @@ class Parser {
           "class csst in c body"
       );
       if (this.CSST()) {
-         console.log("came out of csst" + this.currentToken.lexeme);
-      
+        console.log("came out of csst" + this.currentToken.lexeme);
 
         if (this.currentToken.lexeme === "}") {
-          console.log("end braces")
+          console.log("end braces");
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           return true;
         }
       }
-    } 
-   console.log(" executing the false") 
+    }
+    console.log(" executing the false");
     // else {
-      return false;
+    return false;
     // }
   }
 
@@ -2357,6 +2401,8 @@ class Parser {
           return true;
         }
       }
+    } else if (this.currentToken.lexeme === "}") {
+      return true;
     } else {
       return false;
     }
@@ -2492,7 +2538,8 @@ class Parser {
 
     if (this.Access_modifier()) {
       if (this.IFStatic()) {
-        if (this.currentToken.type === "DataType") {
+        // console.log("static checked")
+        if (this.currentToken.class === "DataTypes") {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.currentToken.class === "VARIABLE") {
@@ -2501,12 +2548,17 @@ class Parser {
             if (this.currentToken.lexeme === "(") {
               this.currentIndex += 1;
               this.currentToken = this.lexer[this.currentIndex];
-
-              if (this.currentToken.lexeme === ")") {
-                this.currentIndex += 1;
-                this.currentToken = this.lexer[this.currentIndex];
-                if (this.c_method_body()) {
-                  return true;
+              if (this.PARAMLIST()) {
+                if (this.currentToken.lexeme === ")") {
+                  this.currentIndex += 1;
+                  this.currentToken = this.lexer[this.currentIndex];
+                  if (this.c_method_body()) {
+                    return true;
+                  }else if(this.currentToken.lexeme === ";"){
+                    this.currentIndex += 1;
+                    this.currentToken = this.lexer[this.currentIndex];
+                    return true;
+                  }
                 }
               }
             }
@@ -2588,13 +2640,11 @@ class Parser {
         } else if (this.currentToken.lexeme === ";") {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
-          if(this.CSST()){
-
+          if (this.CSST()) {
             return true;
           }
         }
-        
-      } 
+      }
     } else if (this.Constructor()) {
       return true;
     } else if (this.class_method()) {
@@ -2604,8 +2654,6 @@ class Parser {
     } else if (this.Array_def()) {
       return true;
     } else if (this.currentToken.lexeme === "}") {
-      
-
       return true;
     } else {
       return false;
@@ -2659,7 +2707,7 @@ class Parser {
         if (this.currentToken.lexeme === "(") {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
-          if (this.CSST()) {
+          if (this.PARAMLIST()) {
             if (this.currentToken.lexeme === ")") {
               this.currentIndex += 1;
               this.currentToken = this.lexer[this.currentIndex];
@@ -2767,26 +2815,24 @@ class Parser {
         "Abstract_class()"
     );
 
-  
-      if (this.currentToken.lexeme === "abstract") {
+    if (this.currentToken.lexeme === "abstract") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.lexeme === "class") {
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
-        if (this.currentToken.lexeme === "class") {
+        if (this.currentToken.class === "VARIABLE") {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
-          if (this.currentToken.class === "VARIABLE") {
+          if (this.currentToken.lexeme === "{") {
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
-            if (this.currentToken.lexeme === "{") {
-              this.currentIndex += 1;
-              this.currentToken = this.lexer[this.currentIndex];
-              if (this.Abstract_body()) {
-                return true;
-              }
+            if (this.Abstract_body()) {
+              return true;
             }
           }
         }
-      
+      }
     } else {
       return false;
     }
@@ -2830,13 +2876,22 @@ class Parser {
         "Abstract_inside()"
     );
     if (this.Abstract_func_types()) {
-      return true;
+      if (this.Abstract_inside()) {
+        return true;
+      }
+    } else if (this.parseDeclaration()) {
+      console.log("parse dec true");
+      if (this.Abstract_inside()) {
+        return true;
+      }
     } else if (this.object_dec()) {
-      return true;
+      if (this.Abstract_inside()) {
+        return true;
+      }
     } else if (this.class_Dec()) {
-      return true;
-    } else if (this.Abstract_func_types()) {
-      return true;
+      if (this.Abstract_inside()) {
+        return true;
+      }
     } else {
       return false;
     }
@@ -2882,30 +2937,29 @@ class Parser {
         if (this.currentToken.lexeme === "(") {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
-          if (this.classVarDeclaration()) {
+          if (this.PARAMLIST()) {
             if (this.currentToken.lexeme === ")") {
+              console.log("found ending ")
               this.currentIndex += 1;
               this.currentToken = this.lexer[this.currentIndex];
               if (this.currentToken.lexeme === ";") {
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
-              }
-            }
-          } else if (this.currentToken.lexeme === ")") {
-            this.currentIndex += 1;
-            this.currentToken = this.lexer[this.currentIndex];
-            if (this.currentToken.lexeme === "{") {
-              this.currentIndex += 1;
-              this.currentToken = this.lexer[this.currentIndex];
-              if (this.CMST()) {
-                if (this.currentToken.lexeme === "}") {
-                  this.currentIndex += 1;
-                  this.currentToken = this.lexer[this.currentIndex];
-                  return true;
+                return true;
+              }  else if (this.currentToken.lexeme === "{") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                if (this.parseMST()) {
+                  if (this.currentToken.lexeme === "}") {
+                    this.currentIndex += 1;
+                    this.currentToken = this.lexer[this.currentIndex];
+                    return true;
+                  }
                 }
-              }
+              } 
             }
           }
+        
         }
       }
     } else {
@@ -3006,10 +3060,10 @@ class Parser {
       }
     } else if (this.currentToken.type === "Operator") {
       return true;
-    } 
+    }
     // else if (this.currentToken.type === "Keyword") {
     //   return true;
-    // } 
+    // }
     else if (this.currentToken.lexeme === "!") {
       return true;
     } else if (this.currentToken.lexeme === "]") {
@@ -3807,6 +3861,14 @@ class Parser {
         return true;
       }
     } else if (this.currentToken.class === "VARIABLE") {
+      const datatype = this.SymbolTable.lookup_scope_table(this.currentToken.lexeme);
+      if(!this.SymbolTable.lookup_scope_table(this.currentToken.lexeme)){
+        this.displaySemanticError("VARIABLE NOT DECLARED!")
+
+      }
+      // if( datatype !== this.datatypecheck.isDataType(datatype)){
+      //   this.displaySemanticError("Type MisMatched")
+      // }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.F2()) {
@@ -3909,8 +3971,16 @@ class Parser {
 
   interfacebody() {
     if (this.Abstract_method()) {
-      return true;
-    } else if (this.classVarDeclaration()) {
+      if(this.interfacebody()){
+
+        return true;
+      }
+    } else if (this.parseDeclaration()) {
+      if(this.interfacebody()){
+
+        return true;
+      }
+    } else if (this.currentToken.lexeme === "}") {
       return true;
     } else {
       return false;
@@ -3928,21 +3998,36 @@ class Parser {
         " " +
         "parse()"
     );
-
+    this.SymbolTable.scope_stack.push(0)
     // Initialize the current token
     this.currentToken = this.lexer[this.currentIndex];
     if (this.parseS()) {
       console.log("success");
       console.log("NO SYNTAX ERROR!!");
       console.log("HAPPY CODING :) !!");
+      this.SymbolTable.print_scope_table();
+      this.SymbolTable.print_def_table();
+
+
     } else if (this.currentToken.type === "EOF") {
       console.log("NO SYNTAX ERROR!!");
       console.log("HAPPY CODING :) !!");
+      this.SymbolTable.print_scope_table();
+      this.SymbolTable.print_def_table();
+
+
     } else {
-      throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme + " " +
-      this.currentToken.lexeme +
-      " ON LINE - " +
-      this.currentToken.lineNumber);
+      this.SymbolTable.print_def_table();
+      // this.SymbolTable.print_all_member_tables();
+      // this.SymbolTable.print_scope_table();
+      throw new SyntaxError(
+        "INVALID SYNTAX: " +
+          this.currentToken.lexeme +
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber
+      );
 
       console.log(
         "SYNTAX ERROR  " +
