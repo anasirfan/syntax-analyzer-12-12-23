@@ -1,5 +1,6 @@
 // Assume Grammar is properly implemented and provides firstSets and followSets
 import Grammar from "./Grammar";
+import { TypesErrorTryExcept } from "./semantic_analyzer";
 // import SemanticAnalyzer from "./semantic_analyzer";
 import SymbolTable from "./symbol_table";
 import DataType from "../lexemes/DataType";
@@ -16,21 +17,21 @@ class Parser {
   constructor(lexer) {
     console.log(lexer);
     this.lexer = lexer;
-    this.functionData = new MemberType();
+    this.trycatcherrors = new TypesErrorTryExcept();
     this.currentIndex = 0;
     this.currentToken = this.lexer[this.currentIndex];
     this.firstSets = new Grammar().firstSets;
     this.followSets = new Grammar().followSets;
     this.SymbolTable = new SymbolTable();
     this.ScopeTableEntry = new ScopeTableEntry();
-    this.DefinitionTableEntry = new DefinitionTableEntry();
-    this.MemberTableEntry = new MemberTableEntry();
+   
+    // this.MemberTableEntry = [new MemberTableEntry()];
     this.datatypecheck = new DataType();
     // this.SemanticAnalyzer = new SemanticAnalyzer();
   }
   displaySemanticError(msg, showLineNumber = true) {
     throw new SyntaxError(`Semantic error ${this.currentToken.lineNumber ? `at line# ${this.currentToken.lineNumber}` : ''} :\n  ${msg}`);
-    console.log('-'.repeat(70));
+    // console.log('-'.repeat(70));
 }
 
 
@@ -466,12 +467,7 @@ class Parser {
         this.currentToken = this.lexer[this.currentIndex];
         if (this.currentToken.class === "VARIABLE") {
           
-        this.ScopeTableEntry.name = this.currentToken.lexeme;
-        if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
-          this.displaySemanticError("REDECLARATION ERROR");
-          this.SymbolTable.print_scope_table();
-
-        }
+          this.ScopeTableEntry.name = this.currentToken.lexeme;
         
 
           this.currentIndex += 1;
@@ -509,6 +505,12 @@ class Parser {
               );
 
               if (this.currentToken.lexeme === ";") {
+               
+        if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+          this.displaySemanticError("REDECLARATION ERROR");
+          this.SymbolTable.print_scope_table();
+
+        }
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
                 return true;
@@ -730,6 +732,7 @@ class Parser {
             if (this.body()) {
               this.SymbolTable.destroy_scope();
               if (this.else()) {
+              this.SymbolTable.destroy_scope();
                 return true;
               }
             }
@@ -1023,10 +1026,14 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.lexeme === "{") {
+       const create_scope = this.SymbolTable.create_scope();
+
+       this.ScopeTableEntry.scope = create_scope;
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.parseMST()) {
           if (this.currentToken.lexeme === "}") {
+            this.SymbolTable.destroy_scope();
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.tryRest()) {
@@ -1054,9 +1061,33 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.lexeme === "(") {
+        const create_scope = this.SymbolTable.create_scope()
+        this.ScopeTableEntry.scope = create_scope
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
+       
+        if(this.currentToken.class === "VARIABLE"){
+          
+          this.ScopeTableEntry.type = this.currentToken.lexeme;
+       
+          this.currentIndex += 1;
+          this.currentToken = this.lexer[this.currentIndex]; 
+          this.trycatcherrors.isTypeExist = false;
+         
+          for (let i = 0; i < this.trycatcherrors.list.length; i++) {
+            // console.log(this.trycatcherrors.list[i]);
+            if(this.ScopeTableEntry.type === this.trycatcherrors.list[i] ){
+                this.trycatcherrors.isTypeExist = true;
+            }
+          }  
+
+          if(this.trycatcherrors.isTypeExist === false){
+            
+            this.displaySemanticError("ERROR DOESN'T EXIST");
+          }
         if (this.currentToken.class === "VARIABLE") {
+          this.ScopeTableEntry.name = this.currentToken.lexeme;
+          this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.currentToken.lexeme === ")") {
@@ -1067,6 +1098,8 @@ class Parser {
               this.currentToken = this.lexer[this.currentIndex];
               if (this.parseMST()) {
                 if (this.currentToken.lexeme === "}") {
+                  this.SymbolTable.destroy_scope();
+
                   this.currentIndex += 1;
                   this.currentToken = this.lexer[this.currentIndex];
                   if (this.tryRest()) {
@@ -1076,6 +1109,7 @@ class Parser {
               }
             }
           }
+        }
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
@@ -1180,6 +1214,7 @@ class Parser {
         " " +
         "func_dec()"
     );
+    this.functionData = new MemberType();
 
     if (this.currentToken.type === "DataType") {
       this.functionData.is_function = true;
@@ -1207,13 +1242,16 @@ class Parser {
                 "expression comp"
             );
             if (this.currentToken.lexeme === ")") {
-              console.log(this.functionData)
+              // console.log(this.functionData)
              this.ScopeTableEntry.type = this.functionData.toString(this.functionData.is_function)
              this.ScopeTableEntry.name = this.functionData.func_name
              this.ScopeTableEntry.scope -=1
+            if(!this.SymbolTable.lookup_function(this.functionData.func_name,this.functionData.func_param_type_list.join(','))){
+              this.displaySemanticError("FUNCTION ALREADY DECLARED!")
+            }
              this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)
 
-              console.log("closing at func");
+              
               this.currentIndex += 1;
               this.currentToken = this.lexer[this.currentIndex];
               if (this.func_body()) {
@@ -1260,7 +1298,9 @@ class Parser {
 
     if (this.type()) {
       if (this.currentToken.class === "VARIABLE") {
+        
         this.ScopeTableEntry.name = this.currentToken.lexeme
+        
         if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
           this.displaySemanticError("REDECLARATION ERROR");
           this.SymbolTable.print_scope_table();
@@ -1298,9 +1338,13 @@ class Parser {
       this.currentToken.class === "VARIABLE" ||
       this.currentToken.type === "DataType"
     ) {
+      
       this.ScopeTableEntry.type = this.currentToken.lexeme
-      this.functionData.func_param_type_list.push(this.currentToken.lexeme)
-
+      if(this.functionData){
+        this.functionData.func_param_type_list.push(this.currentToken.lexeme)
+      }else{
+      this.MemberTableEntry.type.func_param_type_list.push(this.currentToken.lexeme)
+      }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
@@ -1365,6 +1409,8 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
       if (this.parseMST()) {
         if (this.currentToken.lexeme === "}") {
+            this.SymbolTable.destroy_scope();
+
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           return true;
@@ -2139,6 +2185,7 @@ class Parser {
         " " +
         "Class()"
     );
+    this.DefinitionTableEntry = new DefinitionTableEntry();
 
     if (this.currentToken.lexeme === "class") {
       this.DefinitionTableEntry.type = this.currentToken.lexeme;
@@ -2146,6 +2193,7 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
 
       if (this.currentToken.class === "VARIABLE") {
+        this.SymbolTable.current_def_name = this.currentToken.lexeme;
         this.DefinitionTableEntry.name = this.currentToken.lexeme;
         console.log(
           this.currentToken.class +
@@ -2192,9 +2240,13 @@ class Parser {
         " " +
         "Access_modifier()"
     );
+    this.MemberTableEntry = new MemberTableEntry();
 
     if (this.currentToken.class === "AccessModifiers") {
+    
+      this.MemberTableEntry.access_modifier = this.currentToken.lexeme;
       this.DefinitionTableEntry.access_modifier = this.currentToken.lexeme;
+      
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
@@ -2238,7 +2290,11 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.class === "VARIABLE") {
-        this.DefinitionTableEntry.interface_list.push(this.currentToken.lexeme)
+   
+
+          this.DefinitionTableEntry.parent_class = this.currentToken.lexeme;
+         
+
         console.log(
           this.currentToken.class +
             " " +
@@ -2290,6 +2346,8 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
 
       if (this.currentToken.class === "VARIABLE") {
+        
+
         this.DefinitionTableEntry.implements_list.push(this.currentToken.lexeme)
         console.log(
           this.currentToken.class +
@@ -2332,7 +2390,10 @@ class Parser {
         "class_body()"
     );
 
-    this.SymbolTable.insert_into_definition_table(this.DefinitionTableEntry)
+   const bool = this.SymbolTable.insert_into_definition_table(this.DefinitionTableEntry)
+      if(bool === false){
+        this.displaySemanticError("Class Already Defined!")
+      }
 
     if (this.currentToken.lexeme === "{") {
       this.currentIndex += 1;
@@ -2397,6 +2458,10 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Access_modifier()) {
+     
+
+        
+        
         if (this.classVarDeclaration()) {
           return true;
         }
@@ -2420,6 +2485,7 @@ class Parser {
     );
 
     if (this.Access_modifier()) {
+     
       if (this.classVarDeclaration()) {
         return true;
       }
@@ -2440,12 +2506,15 @@ class Parser {
 
     if (this.IFStatic()) {
       if (this.currentToken.type === "DataType") {
+        
+        this.MemberTableEntry.var_type = this.currentToken.lexeme
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.currentToken.class === "VARIABLE") {
+          this.MemberTableEntry.name = this.currentToken.lexeme
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
-
+         
           if (this.ClassparseInit()) {
             console.log(
               this.currentToken.class +
@@ -2466,39 +2535,28 @@ class Parser {
                   " " +
                   "init parsing list found!"
               );
+              if (this.currentToken.lexeme === ";") {
 
-              return true;
-            } else if (this.currentToken.lexeme === ")") {
-              this.currentIndex += 1;
-              this.currentToken = this.lexer[this.currentIndex];
-              return true;
-            }
-          } else if (this.ClassparseInit()) {
-            console.log(
-              this.currentToken.class +
-                " " +
-                this.currentToken.lexeme +
-                " ON LINE - " +
-                this.currentToken.lineNumber +
-                " " +
-                "init parsing found!"
-            );
-            if (this.ClassparseInitList()) {
-              console.log(
-                this.currentToken.class +
-                  " " +
-                  this.currentToken.lexeme +
-                  " ON LINE - " +
-                  this.currentToken.lineNumber +
-                  " " +
-                  "init parsing list found!"
-              );
-              return true;
-            }
-          }
+             if(!this.SymbolTable.insert_into_member_table(this.MemberTableEntry)){
+              this.displaySemanticError("REDECLARATION ERROR!")
+             }
+            
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                return true;
+              }
+            }  
+              
+          } 
         }
       }
-    } else {
+    } else if (this.currentToken.lexeme === ")") {
+      return true;
+    } else if (this.currentToken.lexeme === "}"){
+      return true;
+
+    } 
+    else {
       return false;
     }
   }
@@ -2515,6 +2573,7 @@ class Parser {
     );
 
     if (this.currentToken.lexeme === "static") {
+      this.MemberTableEntry.is_static = true;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
@@ -2536,13 +2595,24 @@ class Parser {
         "class_method()"
     );
 
+
+    
+
     if (this.Access_modifier()) {
+      
+
       if (this.IFStatic()) {
         // console.log("static checked")
+       
         if (this.currentToken.class === "DataTypes") {
+   
+          this.MemberTableEntry.type.is_function = true;
+          this.MemberTableEntry.type.func_return_type = this.currentToken.lexeme
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.currentToken.class === "VARIABLE") {
+            this.MemberTableEntry.name = this.currentToken.lexeme
+           
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.currentToken.lexeme === "(") {
@@ -2550,6 +2620,23 @@ class Parser {
               this.currentToken = this.lexer[this.currentIndex];
               if (this.PARAMLIST()) {
                 if (this.currentToken.lexeme === ")") {
+                  console.log(this.MemberTableEntry.type)
+                  this.MemberTableEntry.var_type = this.MemberTableEntry.type.toString(this.MemberTableEntry.type.is_function)
+                  console.log("params ends : ")
+                  console.log(this.MemberTableEntry)
+             this.ScopeTableEntry.scope -=1
+             console.log("classs name current : ") 
+             console.log(this.DefinitionTableEntry.name)
+             console.log("func name : ")
+             console.log(this.MemberTableEntry.name)
+             console.log("param list : ")
+             console.log(this.MemberTableEntry.type)
+        if(!this.SymbolTable.lookup_member_table_func(this.MemberTableEntry.name, this.MemberTableEntry.type.func_param_type_list,this.DefinitionTableEntry.name)){
+          this.displaySemanticError("FUNCTION ALREADY DECLARED")
+        }
+        
+          
+             this.SymbolTable.insert_into_member_table(this.MemberTableEntry)
                   this.currentIndex += 1;
                   this.currentToken = this.lexer[this.currentIndex];
                   if (this.c_method_body()) {
@@ -2629,21 +2716,10 @@ class Parser {
             " " +
             "PARSE DEC C OMPLETE"
         );
-        if (this.currentToken.lexeme === "{") {
-          this.currentIndex += 1;
-          this.currentToken = this.lexer[this.currentIndex];
-          if (this.currentToken.lexeme === "}") {
-            this.currentIndex += 1;
-            this.currentToken = this.lexer[this.currentIndex];
-            return true;
-          }
-        } else if (this.currentToken.lexeme === ";") {
-          this.currentIndex += 1;
-          this.currentToken = this.lexer[this.currentIndex];
           if (this.CSST()) {
             return true;
           }
-        }
+
       }
     } else if (this.Constructor()) {
       return true;
@@ -3862,6 +3938,7 @@ class Parser {
       }
     } else if (this.currentToken.class === "VARIABLE") {
       const datatype = this.SymbolTable.lookup_scope_table(this.currentToken.lexeme);
+      console.log("first")
       if(!this.SymbolTable.lookup_scope_table(this.currentToken.lexeme)){
         this.displaySemanticError("VARIABLE NOT DECLARED!")
 
@@ -4007,6 +4084,8 @@ class Parser {
       console.log("HAPPY CODING :) !!");
       this.SymbolTable.print_scope_table();
       this.SymbolTable.print_def_table();
+      this.SymbolTable.print_all_member_tables();
+
 
 
     } else if (this.currentToken.type === "EOF") {
@@ -4014,6 +4093,8 @@ class Parser {
       console.log("HAPPY CODING :) !!");
       this.SymbolTable.print_scope_table();
       this.SymbolTable.print_def_table();
+      this.SymbolTable.print_all_member_tables();
+
 
 
     } else {
@@ -4029,14 +4110,7 @@ class Parser {
           this.currentToken.lineNumber
       );
 
-      console.log(
-        "SYNTAX ERROR  " +
-          this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber
-      );
+    
     }
   }
 

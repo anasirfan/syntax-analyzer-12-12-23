@@ -5,7 +5,7 @@ class SymbolTableManager {
         this.last_scope_num = 0;
         this.scope_stack = [];
         this.scope_table = [];
-        this.definition_table = [];
+        this.definition_table =  [new DefinitionTableEntry()];
         this.current_def_name = null;
         this.is_curr_def_class = false;
         this.is_main_found = false;
@@ -85,17 +85,16 @@ class SymbolTableManager {
 //     }
 
     insert_into_scope_table(scopetable) {
-      console.log(scopetable)
+
       // console.log(scopetable.name)
       const scopetableinstance = [];
 
         const scope = this.scope_stack[this.scope_stack.length - 1];
 
         for (const entry of this.scope_table) {
-          console.log("name: "+entry[0] + " current name: " + scopetable.name);
-          console.log("scope"+ entry[2] + " current scope: " + scopetable.scope )
+
             if (entry[0] === scopetable.name && entry[2] === scopetable.scope) {
-              console.log("error")
+
                 return false;
             }
         }
@@ -107,57 +106,63 @@ class SymbolTableManager {
     }
 
     insert_into_definition_table(defTableEntry) {
-      const deftableinstance = [];
-      console.log(defTableEntry)
+      
+
         for (const entry of this.definition_table) {
-            if (entry[0] === defTableEntry.name) {
+            if (entry.name === defTableEntry.name) {
                 return false;
             }
         }
 
-        deftableinstance.push(defTableEntry.name,defTableEntry.type,defTableEntry.access_modifier,defTableEntry.parent_class,defTableEntry.implements_list,defTableEntry.interface_list,defTableEntry.member_table);
-        this.definition_table.push(deftableinstance)
+      
+        this.definition_table.push(defTableEntry)
+    
         return true;
     }
 
-//     insert_into_member_table(memberTableEntry) {
-//         const memberTable = this.lookup_definition_table(this.current_def_name).member_table;
+    insert_into_member_table(memberTableEntry) {
+      console.log(memberTableEntry)
+        const memberTable = this.lookup_definition_table(this.current_def_name).member_table;
+        for (const entry of memberTable) {
+            if (entry.name === memberTableEntry.name) {
+            
+                if (!entry.type.is_function || !memberTableEntry.type.is_function) {
+                    return false;
+                }
 
-//         for (const entry of memberTable) {
-//             if (entry.name === memberTableEntry.name) {
-//                 if (!entry.type.is_function || !memberTableEntry.type.is_function) {
-//                     return false;
-//                 }
+                if (entry.type.func_param_type_list.toString() === memberTableEntry.type.func_param_type_list.toString()) {
+                    return false;
+                }
+            }
+        }
 
-//                 if (entry.type.func_param_type_list.toString() === memberTableEntry.type.func_param_type_list.toString()) {
-//                     return false;
-//                 }
-//             }
-//         }
+        memberTable.push(memberTableEntry);
 
-//         memberTable.push(memberTableEntry);
-//         return true;
-//     }
+        console.log(this.definition_table);
+        return true;
+    }
 
-//     check_inside_loop() {
-//         for (let i = this.scope_stack.length - 1; i >= 0; i--) {
-//             const [, isLoop] = this.scope_stack[i];
+    check_inside_loop() {
+        for (let i = this.scope_stack.length - 1; i >= 0; i--) {
+            const [, isLoop] = this.scope_stack[i];
 
-//             if (isLoop) {
-//                 return true;
-//             }
-//         }
+            if (isLoop) {
+                return true;
+            }
+        }
 
-//         return false;
-//     }
+        return false;
+    }
 
     lookup_scope_table(name) {
-      console.log(this.scope_stack)
+
         for (let i = this.scope_stack.length - 1; i >= 0; i--) {
           console.log("first val")
             const scope = this.scope_stack[i];
 
             for (const entry of this.scope_table) {
+      
+              
                 if (entry[0] === name && entry[2] === scope) {
                     return entry[1];
                 }
@@ -166,56 +171,76 @@ class SymbolTableManager {
         return false;
     }
 
-//     lookup_definition_table(name) {
-//         for (const entry of this.definition_table) {
-//             if (entry.name === name) {
-//                 return entry;
-//             }
-//         }
-//     }
+    lookup_definition_table(name) {
+ 
+        for (const entry of this.definition_table) {
+            if (entry.name === name) {
+              
+                return entry;
+            }
+        }
+    }
 
-//     lookup_member_table(name, defRef) {
-//         let defTable = this.lookup_definition_table(defRef);
+    // lookup_member_table(name, defRef) {
+    //     let defTable = this.lookup_definition_table(defRef);
 
-//         for (const entry of defTable.member_table) {
-//             if (entry.name === name) {
-//                 if (!entry.type.is_function) {
-//                     return entry;
-//                 }
-//             }
-//         }
+    //     for (const entry of defTable.member_table) {
+    //         if (entry.name === name) {
+    //             if (!entry.type.is_function) {
+    //                 return entry;
+    //             }
+    //         }
+    //     }
 
-//         while (defTable.parent_class !== null) {
-//             defTable = this.lookup_definition_table(defTable.parent_class);
+    //     // while (defTable.parent_class !== null) {
+    //     //     defTable = this.lookup_definition_table(defTable.parent_class);
 
-//             for (const entry of defTable.member_table) {
-//                 if (entry.name === name) {
-//                     if (!entry.type.is_function) {
-//                         return entry;
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     lookup_member_table_func(name, param_type_list, def_ref) {
-//       let defTable = this.lookup_definition_table(def_ref);
+    //     //     for (const entry of defTable.member_table) {
+    //     //         if (entry.name === name) {
+    //     //             if (!entry.type.is_function) {
+    //     //                 return entry;
+    //     //             }
+    //     //         }
+    //     //     }
+    //     // }
+    // }
+    lookup_function(name,param_type_list){
+   
+      for (const entry of this.scope_table) {
+      if(entry[1].includes("->")){
+        const split = entry[1].split('->')[0];
+        console.log("split " + split)
+        if(split === param_type_list && entry[0] === name){
+      return false;
+        }
+      }
+        
+    }
+    return true;
+
+    }
+    lookup_member_table_func(name, param_type_list, def_ref) {
+      let defTable = this.lookup_definition_table(def_ref);
+      console.log("def tab ")
+      console.log(defTable)
+      for (const entry of defTable.member_table) {
+      
+          if (entry.name === name && entry.type.is_function && entry.type.func_param_type_list.toString() === param_type_list.toString()) {
+              return false;
+          }
+      }
   
-//       for (const entry of defTable.member_table) {
-//           if (entry.name === name && entry.type.is_function && entry.type.func_param_type_list.toString() === param_type_list.toString()) {
-//               return entry;
-//           }
-//       }
+      // while (defTable.parent_class !== null) {
+      //     defTable = this.lookup_definition_table(defTable.parent_class);
   
-//       while (defTable.parent_class !== null) {
-//           defTable = this.lookup_definition_table(defTable.parent_class);
-  
-//           for (const entry of defTable.member_table) {
-//               if (entry.name === name && entry.type.is_function && entry.type.func_param_type_list.toString() === param_type_list.toString()) {
-//                   return entry;
-//               }
-//           }
-//       }
-//   }
+      //     for (const entry of defTable.member_table) {
+      //         if (entry.name === name && entry.type.is_function && entry.type.func_param_type_list.toString() === param_type_list.toString()) {
+      //             return entry;
+      //         }
+      //     }
+      // }
+      return true;
+  }
   
 //   check_parent_class(parent_class_name, child_class_name) {
 //       const defTable = this.lookup_definition_table(child_class_name);
@@ -420,14 +445,14 @@ class SymbolTableManager {
 
 print_def_table() {
   console.log('Definition Table');
-  console.log(this.definition_table)
-  const entry_tuples = this.definition_table.map((entry) => ({
-    Name: entry[0],
-    'Access Modifier': entry[2],
-    Type: entry[1],
-    Parent: entry[3],
-    Interface: entry[5].join(', '),
-    Implements: entry[4].join(', ')
+
+  const entry_tuples = this.definition_table.slice(1).map((entry) => ({
+    Name: entry.name,
+    'Access Modifier': entry.access_modifier,
+    Type: entry.type,  
+    Parent: entry.parent_class,
+    Interface: entry.interface_list.join(', '),
+    Implements: entry.implements_list.join(', ')
   }));
 
   console.log(
@@ -439,29 +464,29 @@ print_def_table() {
   );
 }
 
-// print_all_member_tables() {
-//   console.log('Member Tables: ');
-//   this.definition_table.forEach((def_entry) => {
-//     const entry_tuples = def_entry.member_table.map((entry) => ({
-//       Name: entry.name,
-//       'Access Modifier': entry.access_modifier,
-//       Type: entry.type,
-//       'Is Static': entry.is_static,
-//     }));
+print_all_member_tables() {
+  console.log('Member Tables: ');
+  this.definition_table.forEach((def_entry) => {
+    const entry_tuples = def_entry.member_table.slice(1).map((entry) => ({
+      Name: entry.name,
+      'Access Modifier': entry.access_modifier,
+      Type: entry.var_type,
+      'Is Static': entry.is_static,
+    }));
 
-//     console.log(
-//       this.printTable(
-//         entry_tuples,
-//         ['Name', 'Access Modifier', 'Type', 'Is Static']
+    console.log(
+      this.printTable(
+        entry_tuples,
+        ['Name', 'Access Modifier', 'Type', 'Is Static']
         
-//       )
-//     );
-//   });
-// }
+      )
+    );
+  });
+}
 
 print_scope_table() {
   console.log('Scope Table:');
-  console.log(this.scope_table);
+
   const entry_tuples = this.scope_table.map((entry) => ({
     Name: entry[0],
     Type: entry[1],

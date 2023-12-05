@@ -41,7 +41,8 @@ export class MemberType {
       this.func_param_type_list = [];
       this.func_return_type = null;
       this.func_name = "";
-      this.var_type = new TypeInfo();
+      this.var_type =  new TypeInfo();
+   
   }
 
   toString() {
@@ -68,20 +69,30 @@ export class MemberTableEntry {
   constructor() {
       this.name = "";
       this.type = new MemberType();
+      
       this.access_modifier = "private";
       this.is_static = false;
   }
 }
+
+export class TypesErrorTryExcept {
+    constructor() {
+       this.list = ["SyntaxError","TypeError", "NameError", "ValueError", "FileNotFoundError", "ZeroDivisionError" ]
+       this.isTypeExist = false;
+
+    }
+  }
+  
 
 export class DefinitionTableEntry {
   constructor() {
       this.name = "";
       this.type = "";
       this.access_modifier = "public";
-      this.parent_class = " ";
+      this.parent_class = "";
       this.implements_list =[];
       this.interface_list = [];
-      this.member_table = [];
+      this.member_table =  [new MemberTableEntry()];
   }
 }
 
