@@ -111,9 +111,18 @@ class Parser {
         " " +
         "parseSST()"
     );
-
+    this.TypeChecker = new TypeCheckingInfo();
     if (this.Expression()) {
       if (this.currentToken.lexeme === ";") {
+        
+        if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+          console.log("working")
+        if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
+          this.displaySemanticError("TYPE MISMATCH ERROR");
+          this.SymbolTable.print_scope_table();
+          
+        }
+      }
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         return true;
@@ -138,6 +147,14 @@ class Parser {
     } else if (this.TS()) {
       if (this.Expression()) {
         if (this.currentToken.lexeme === ";") {
+          if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+            console.log("working")
+          if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
+            this.displaySemanticError("TYPE MISMATCH ERROR");
+            this.SymbolTable.print_scope_table();
+            
+          }
+        }
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           return true;
@@ -262,6 +279,7 @@ class Parser {
           " " +
           "assignment operator found! "
       );
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       // if (this.TS()) {
@@ -454,6 +472,7 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.class === "DataTypes") {
         this.ScopeTableEntry.type = this.currentToken.lexeme;
+        this.TypeChecker.left_operand_type = this.currentToken.lexeme;
         console.log(
           this.currentToken.class +
             " " +
@@ -505,11 +524,17 @@ class Parser {
               );
 
               if (this.currentToken.lexeme === ";") {
+                console.log(this.TypeChecker)
                
         if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
           this.displaySemanticError("REDECLARATION ERROR");
           this.SymbolTable.print_scope_table();
 
+        }
+        if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
+          this.displaySemanticError("TYPE MISMATCH ERROR");
+          this.SymbolTable.print_scope_table();
+          
         }
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
@@ -560,6 +585,7 @@ class Parser {
 
   cases() {
     if (this.Expression()) {
+
       return true;
     } else if (this.currentToken.lexeme === "class") {
       return true;
@@ -585,6 +611,14 @@ class Parser {
 
     if (this.Expression()) {
       if (this.currentToken.lexeme === ";") {
+        if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+          console.log("working")
+        if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
+          this.displaySemanticError("TYPE MISMATCH ERROR");
+          this.SymbolTable.print_scope_table();
+          
+        }
+      }
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         return true;
@@ -668,6 +702,11 @@ class Parser {
     );
 
     if (this.currentToken.lexeme === "++") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
+      console.log(this.TypeChecker)
+      if(!this.SymbolTable.check_compatibility_unary_op(this.TypeChecker.left_operand_type, this.TypeChecker.operator)){
+        this.displaySemanticError("TYPE MISMATCH ERROR !");
+      }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
@@ -717,6 +756,14 @@ class Parser {
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.Expression()) {
+          if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+            console.log("working")
+          if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
+            this.displaySemanticError("TYPE MISMATCH ERROR");
+            this.SymbolTable.print_scope_table();
+            
+          }
+        }
           if (this.currentToken.lexeme === ")") {
             console.log(
               this.currentToken.class +
@@ -907,11 +954,7 @@ class Parser {
             console.log("semi col found in cycle");
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
-            if (this.Expression()) {
-              if (this.currentToken.lexeme === ";") {
-                this.currentIndex += 1;
-                this.currentToken = this.lexer[this.currentIndex];
-
+          
                 if (this.currentToken.class === "VARIABLE") {
                   console.log("VARIABLE  found in cycle");
 
@@ -927,8 +970,7 @@ class Parser {
                       return true;
                     }
                   }
-                }
-              }
+              
             }
           }
         }
@@ -1469,15 +1511,22 @@ class Parser {
         " " +
         "Array_def()"
     );
-
+    
     if (this.currentToken.lexeme === "list") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Arr_type()) {
         if (this.currentToken.class === "VARIABLE") {
+          
+          if(this.MemberTableEntry){
+          this.MemberTableEntry.name = this.currentToken.lexeme;
+          } else {
+            this.ScopeTableEntry.name = this.currentToken.lexeme;
+          }
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.currentToken.lexeme === "=") {
+
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.body_Arr()) {
@@ -1496,13 +1545,22 @@ class Parser {
 
   Arr_type() {
     if (this.currentToken.type === "DataType") {
+      if(this.MemberTableEntry){
+      this.MemberTableEntry.var_type = this.currentToken.lexeme;
+      } else {
+        this.ScopeTableEntry.type = this.currentToken.lexeme;
+
+      }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
     } else if (this.currentToken.lexeme === "list") {
+
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.type === "DataType") {
+        this.ScopeTableEntry.type = this.currentToken.lexeme;
+
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         return true;
@@ -1532,6 +1590,19 @@ class Parser {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.currentToken.lexeme === ";") {
+            
+           
+            if(this.MemberTableEntry){
+             if(!this.SymbolTable.insert_into_member_table(this.MemberTableEntry)){
+              this.displaySemanticError("REDECLARATION ERROR!")
+             }
+            }else {
+              if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+                this.displaySemanticError("REDECLARATION ERROR");
+                this.SymbolTable.print_scope_table();
+      
+              }
+            }
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             return true;
@@ -2243,9 +2314,9 @@ class Parser {
     this.MemberTableEntry = new MemberTableEntry();
 
     if (this.currentToken.class === "AccessModifiers") {
-    
-      this.MemberTableEntry.access_modifier = this.currentToken.lexeme;
+
       this.DefinitionTableEntry.access_modifier = this.currentToken.lexeme;
+      
       
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
@@ -2291,8 +2362,10 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.class === "VARIABLE") {
    
-
-          this.DefinitionTableEntry.parent_class = this.currentToken.lexeme;
+        if(!this.SymbolTable.lookup_definition_table(this.currentToken.lexeme)){
+          this.displaySemanticError("UNDEFINED PARENT CLASS")
+        }
+        this.DefinitionTableEntry.parent_class = this.currentToken.lexeme;
          
 
         console.log(
@@ -2346,6 +2419,9 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
 
       if (this.currentToken.class === "VARIABLE") {
+        if(!this.SymbolTable.lookup_definition_table(this.currentToken.lexeme)){
+          this.displaySemanticError("UNDEFINED INTERFACE!")
+        }
         
 
         this.DefinitionTableEntry.implements_list.push(this.currentToken.lexeme)
@@ -2599,7 +2675,14 @@ class Parser {
     
 
     if (this.Access_modifier()) {
-      
+           this.currentIndex -= 1;
+            this.currentToken = this.lexer[this.currentIndex];
+            if(this.currentToken.class === "AccessModifiers"){
+
+              this.MemberTableEntry.access_modifier = this.currentToken.lexeme;
+            }
+      this.currentIndex += 1;
+            this.currentToken = this.lexer[this.currentIndex];
 
       if (this.IFStatic()) {
         // console.log("static checked")
@@ -2722,13 +2805,18 @@ class Parser {
 
       }
     } else if (this.Constructor()) {
-      return true;
+      if (this.CSST()) {
+        return true;
+      }
     } else if (this.class_method()) {
       if (this.CSST()) {
         return true;
       }
     } else if (this.Array_def()) {
-      return true;
+      if (this.CSST()) {
+        return true;
+      }
+  
     } else if (this.currentToken.lexeme === "}") {
       return true;
     } else {
@@ -3120,6 +3208,7 @@ class Parser {
         " " +
         "Expression1()"
     );
+    
 
     if (
       this.currentToken.class === "COMPOUND_EQUAL_PLUS" ||
@@ -3127,6 +3216,7 @@ class Parser {
       this.currentToken.class === "COMPOUND_EQUAL_DIVIDE" ||
       this.currentToken.class === "COMPOUND_EQUAL_MULTIPLY"
     ) {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.compound_Ass()) {
@@ -3236,6 +3326,8 @@ class Parser {
     );
 
     if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
+
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Assignment_opt()) {
@@ -3284,6 +3376,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "NOT") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.NOT()) {
@@ -3332,6 +3425,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "OR") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.OR()) {
@@ -3382,6 +3476,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "AND") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.AND()) {
@@ -3434,6 +3529,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "RELATIONAL_OPERATOR") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.ROP()) {
@@ -3488,6 +3584,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "PLUS_MINUS") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.PM()) {
@@ -3546,6 +3643,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.MDM()) {
@@ -3620,6 +3718,7 @@ class Parser {
     );
 
     if (this.currentToken.lexeme === "+") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.P()) {
@@ -3680,6 +3779,7 @@ class Parser {
     );
 
     if (this.currentToken.lexeme === "^") {
+      this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Dec()) {
@@ -3742,6 +3842,8 @@ class Parser {
     );
 
     if (this.currentToken.lexeme === "++") {
+      console.log("at ++ ")
+     
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
 
@@ -3848,6 +3950,12 @@ class Parser {
     );
 
     if (this.currentToken.class === "INTEGER") {
+      if(this.TypeChecker.left_operand_type === ''){
+        this.TypeChecker.left_operand_type = 'num'
+      }else{
+        this.TypeChecker.right_operand_type = 'num'
+
+      }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
@@ -3861,6 +3969,12 @@ class Parser {
       );
       return true;
     } else if (this.currentToken.class === "BOOLEAN") {
+      if(this.TypeChecker.left_operand_type === ''){
+        this.TypeChecker.left_operand_type = 'bool'
+      }else{
+        this.TypeChecker.right_operand_type = 'bool'
+
+      }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
@@ -3875,6 +3989,12 @@ class Parser {
 
       return true;
     } else if (this.currentToken.class === "STRING") {
+      if(this.TypeChecker.left_operand_type === ''){
+        this.TypeChecker.left_operand_type = 'string'
+      }else{
+        this.TypeChecker.right_operand_type = 'string'
+
+      }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
@@ -3889,6 +4009,12 @@ class Parser {
 
       return true;
     } else if (this.currentToken.class === "FLOATING_POINT") {
+      if(this.TypeChecker.left_operand_type === ''){
+        this.TypeChecker.left_operand_type = 'dec'
+      }else{
+        this.TypeChecker.right_operand_type = 'dec'
+
+      }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
@@ -3937,11 +4063,25 @@ class Parser {
         return true;
       }
     } else if (this.currentToken.class === "VARIABLE") {
+      
+        console.log("at F variable")
+        console.log(this.TypeChecker)
+
       const datatype = this.SymbolTable.lookup_scope_table(this.currentToken.lexeme);
-      console.log("first")
-      if(!this.SymbolTable.lookup_scope_table(this.currentToken.lexeme)){
+
+      //   this.TypeChecker.left_operand_type = 'dec'
+    
+    console.log(datatype)
+      if(!datatype){
         this.displaySemanticError("VARIABLE NOT DECLARED!")
 
+      }
+      if(this.TypeChecker.left_operand_type === "" || this.TypeChecker.left_operand_type.data_type === ''){
+      this.TypeChecker.left_operand_type = datatype;
+        
+      }else{
+
+        this.TypeChecker.right_operand_type = datatype;
       }
       // if( datatype !== this.datatypecheck.isDataType(datatype)){
       //   this.displaySemanticError("Type MisMatched")
