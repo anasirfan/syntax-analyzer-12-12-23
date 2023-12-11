@@ -155,9 +155,11 @@ class SymbolTableManager {
   }
 
   lookup_scope_table(name) {
-
+    console.log("scope table :")
+    // console.log(this.scope_stack)
     for (let i = this.scope_stack.length - 1; i >= 0; i--) {
       console.log("first val")
+
       const scope = this.scope_stack[i];
 
       for (const entry of this.scope_table) {

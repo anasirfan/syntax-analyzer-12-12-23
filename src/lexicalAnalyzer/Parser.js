@@ -24,6 +24,7 @@ class Parser {
     this.followSets = new Grammar().followSets;
     this.SymbolTable = new SymbolTable();
     this.ScopeTableEntry = new ScopeTableEntry();
+    
    
     // this.MemberTableEntry = [new MemberTableEntry()];
     this.datatypecheck = new DataType();
@@ -46,7 +47,7 @@ class Parser {
         "parseS()"
     );
 
-
+    this.SymbolTable.scope_stack.push(0);
     if (this.currentToken && this.currentToken.class) {
       if (
         this.currentToken.lexeme !== "EOF" &&
@@ -455,7 +456,7 @@ class Parser {
       return false;
     }
   }
-
+ 
   // Parser   for Declaration
   parseDeclaration() {
     console.log(
@@ -777,9 +778,9 @@ class Parser {
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.body()) {
-              this.SymbolTable.destroy_scope();
+              
               if (this.else()) {
-              this.SymbolTable.destroy_scope();
+              
                 return true;
               }
             }
@@ -812,6 +813,7 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
       if (this.parseMST()) {
         if (this.currentToken.lexeme === "}") {
+          this.SymbolTable.destroy_scope();
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           return true;
@@ -866,7 +868,7 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-    } else if (this.currentToken.type === "Datatype") {
+    } else if (this.currentToken.class === "DataTypes") {
       return true;
     } else if (this.currentToken.lexeme === "return") {
       return true;
