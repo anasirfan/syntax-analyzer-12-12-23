@@ -30,6 +30,7 @@ class Parser {
     this.datatypecheck = new DataType();
     // this.SemanticAnalyzer = new SemanticAnalyzer();
   }
+
   displaySemanticError(msg, showLineNumber = true) {
     throw new SyntaxError(`Semantic error ${this.currentToken.lineNumber ? `at line# ${this.currentToken.lineNumber}` : ''} :\n  ${msg}`);
     // console.log('-'.repeat(70));
