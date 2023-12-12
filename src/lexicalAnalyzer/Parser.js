@@ -26,6 +26,8 @@ class Parser {
     this.ScopeTableEntry = new ScopeTableEntry();
     this.func_data_type = '';
     this.func_data_type_array = [];
+    this.thisSuper = false;
+    this.returnType = '';
 
 
     // this.MemberTableEntry = [new MemberTableEntry()];
@@ -148,8 +150,11 @@ class Parser {
     } else if (this.parseCycleLoop()) {
       return true;
     } else if (this.TS()) {
+
       if (this.Expression()) {
         if (this.currentToken.lexeme === ";") {
+            this.thisSuper = false
+
           if (this.TypeChecker.left_operand_type !== "" && (this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== "") {
             console.log("working")
             if (!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type, this.TypeChecker.right_operand_type, this.TypeChecker.operator)) {
@@ -241,6 +246,7 @@ class Parser {
       this.currentToken.lexeme === "this" ||
       this.currentToken.lexeme === "super"
     ) {
+      this.thisSuper = true
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.lexeme === ".") {
@@ -579,6 +585,11 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.cases()) {
+        console.log(this.func_data_type)
+        console.log(this.functionData.func_return_type)
+        if(this.func_data_type !== this.functionData.func_return_type){
+          this.displaySemanticError("MISMATCHED RETURN TYPE")
+        }
         return true;
       }
     } else {
@@ -1851,6 +1862,9 @@ class Parser {
     if(param1 === param2){
       console.log("matched")
       return true;
+    } else if(param1 === "" && param2 === 'null'){
+      return true;
+
     }else{
       console.log("not matched")
 
@@ -1872,8 +1886,7 @@ class Parser {
     console.log(this.func_data_type)
 
     this.result = this.func_split(this.func_data_type)
-    console.log("result :")
-    console.log(this.result)
+
     if (this.currentToken.lexeme === "(") {
        this.func_check = new func_data_type_check();
       this.currentIndex += 1;
@@ -4029,6 +4042,7 @@ class Parser {
     );
 
     if (this.currentToken.class === "INTEGER") {
+      this.func_data_type = 'num'
       if(this.func_check){
         this.func_check.paramlist.push('num')
       }
@@ -4053,6 +4067,8 @@ class Parser {
       );
       return true;
     } else if (this.currentToken.class === "BOOLEAN") {
+      this.func_data_type = 'bool'
+
       if(this.func_check){
         this.func_check.paramlist.push('bool')
       }
@@ -4079,6 +4095,8 @@ class Parser {
 
       return true;
     } else if (this.currentToken.class === "STRING") {
+      this.func_data_type = 'string'
+
       if(this.func_check){
         this.func_check.paramlist.push('string')
       }
@@ -4105,6 +4123,8 @@ class Parser {
 
       return true;
     } else if (this.currentToken.class === "FLOATING_POINT") {
+      this.func_data_type = 'dec'
+
       if(this.func_check){
         this.func_check.paramlist.push('dec')
       }
@@ -4147,6 +4167,7 @@ class Parser {
     );
 
     if (this.const()) {
+      console.log("true from const")
       return true;
     } else if (this.currentToken.lexeme === "(") {
       this.currentIndex += 1;
@@ -4165,9 +4186,25 @@ class Parser {
         return true;
       }
     } else if (this.currentToken.class === "VARIABLE") {
-
+      console.log(
+        this.currentToken.class +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "F() VARIABLE"
+      );
+      console.log(this.thisSuper)
       const datatype = this.SymbolTable.lookup_scope_table(this.currentToken.lexeme);
-
+      
+      if(this.thisSuper){
+        const thisSuperReturn = this.SymbolTable.lookup_parent_var_this_super(this.currentToken.lexeme,this.DefinitionTableEntry.name)
+        if(!thisSuperReturn){
+          this.displaySemanticError("VARIABLE NOT FOUND IN PARENT CLASS")
+        }
+        this.func_data_type = thisSuperReturn.var_type
+      } else{
       //   this.TypeChecker.left_operand_type = 'dec'
       this.func_data_type = datatype
       if(this.func_check){
@@ -4186,7 +4223,7 @@ class Parser {
       this.func_data_type = membertablevardatatype.var_type
       
     }
-    
+  }
       if (this.TypeChecker.left_operand_type === "" || this.TypeChecker.left_operand_type.data_type === '') {
         this.TypeChecker.left_operand_type = this.func_data_type;
 

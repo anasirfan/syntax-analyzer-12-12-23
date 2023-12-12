@@ -193,20 +193,30 @@ class SymbolTableManager {
               }
           }
       }
-
-      // while (defTable.parent_class !== "") {
-      //     defTable = this.lookup_definition_table(defTable.parent_class);
-      //     for (const entry of defTable.member_table) {
-      //         if (entry.name === name) {
-      //             if (!entry.type.is_function) {
-      //                 return entry;
-      //             }
-      //         }
-      //     }
-      // }
   }
 
+lookup_parent_var_this_super(name, defRef){
+  console.log("working in this super")
+  console.log(name)
+  console.log(defRef)
+  let defTable = this.lookup_definition_table(defRef);
+  while (defTable.parent_class !== "") {
+    defTable = this.lookup_definition_table(defTable.parent_class);
+    console.log(defTable)
+    for (const entry of defTable.member_table) {
+      console.log("curr name :") 
+      console.log(name)
+      console.log("parent name : ")
+      console.log(entry.name)
+        if (entry.name === name) {
+            
+                return entry;
+            
+        }
+    }
+}
 
+}
   lookup_function(name, param_type_list) {
 
     for (const entry of this.scope_table) {
