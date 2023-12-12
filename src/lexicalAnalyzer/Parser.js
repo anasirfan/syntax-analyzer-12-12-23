@@ -47,6 +47,7 @@ class Parser {
     );
 
 
+    this.SymbolTable.scope_stack.push(0);
     if (this.currentToken && this.currentToken.class) {
       if (
         this.currentToken.lexeme !== "EOF" &&
@@ -120,7 +121,6 @@ class Parser {
         if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
           this.displaySemanticError("TYPE MISMATCH ERROR");
           this.SymbolTable.print_scope_table();
-          
         }
       }
         this.currentIndex += 1;
@@ -866,7 +866,7 @@ class Parser {
         return true;
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
-    } else if (this.currentToken.type === "Datatype") {
+    } else if (this.currentToken.class === "DataTypes") {
       return true;
     } else if (this.currentToken.lexeme === "return") {
       return true;
