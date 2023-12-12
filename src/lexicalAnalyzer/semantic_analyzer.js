@@ -1,5 +1,6 @@
 export class TypeInfo {
   constructor(data_type = "") {
+
       this.data_type = data_type;
       this.dimensions = 0;
       this.is_pointer = false;
@@ -105,6 +106,14 @@ export class TypeCheckingInfo {
   }
 }
 
+
+export class func_data_type_check {
+    constructor() {
+        this.paramlist = [];
+        
+    }
+
+}
 // Import SymbolTable from "./symbol_table";
 // (Assuming you have SymbolTable class implemented in the symbol_table module)
 

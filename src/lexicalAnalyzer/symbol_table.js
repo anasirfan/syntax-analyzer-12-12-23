@@ -183,29 +183,30 @@ class SymbolTableManager {
     }
   }
 
-  // lookup_member_table(name, defRef) {
-  //     let defTable = this.lookup_definition_table(defRef);
+  lookup_member_table(name, defRef) {
+      let defTable = this.lookup_definition_table(defRef);
 
-  //     for (const entry of defTable.member_table) {
-  //         if (entry.name === name) {
-  //             if (!entry.type.is_function) {
-  //                 return entry;
-  //             }
-  //         }
-  //     }
+      for (const entry of defTable.member_table) {
+          if (entry.name === name) {
+              if (!entry.type.is_function) {
+                  return entry;
+              }
+          }
+      }
 
-  //     // while (defTable.parent_class !== null) {
-  //     //     defTable = this.lookup_definition_table(defTable.parent_class);
+      // while (defTable.parent_class !== "") {
+      //     defTable = this.lookup_definition_table(defTable.parent_class);
+      //     for (const entry of defTable.member_table) {
+      //         if (entry.name === name) {
+      //             if (!entry.type.is_function) {
+      //                 return entry;
+      //             }
+      //         }
+      //     }
+      // }
+  }
 
-  //     //     for (const entry of defTable.member_table) {
-  //     //         if (entry.name === name) {
-  //     //             if (!entry.type.is_function) {
-  //     //                 return entry;
-  //     //             }
-  //     //         }
-  //     //     }
-  //     // }
-  // }
+
   lookup_function(name, param_type_list) {
 
     for (const entry of this.scope_table) {
@@ -222,6 +223,12 @@ class SymbolTableManager {
 
   }
   lookup_member_table_func(name, param_type_list, def_ref) {
+    console.log("func name : ")
+    console.log(name)
+    console.log("param list : ")
+    console.log(param_type_list)
+    console.log("class ref : ")
+    console.log(def_ref)
     let defTable = this.lookup_definition_table(def_ref);
     console.log("def tab ")
     console.log(defTable)

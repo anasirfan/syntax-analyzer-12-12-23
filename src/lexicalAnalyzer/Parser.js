@@ -4,7 +4,7 @@ import { TypesErrorTryExcept } from "./semantic_analyzer";
 // import SemanticAnalyzer from "./semantic_analyzer";
 import SymbolTable from "./symbol_table";
 import DataType from "../lexemes/DataType";
-import { MemberType } from "./semantic_analyzer";
+import { MemberType, func_data_type_check } from "./semantic_analyzer";
 import {
   DefinitionTableEntry,
   ScopeTableEntry,
@@ -24,8 +24,10 @@ class Parser {
     this.followSets = new Grammar().followSets;
     this.SymbolTable = new SymbolTable();
     this.ScopeTableEntry = new ScopeTableEntry();
-    
-   
+    this.func_data_type = '';
+    this.func_data_type_array = [];
+
+
     // this.MemberTableEntry = [new MemberTableEntry()];
     this.datatypecheck = new DataType();
     // this.SemanticAnalyzer = new SemanticAnalyzer();
@@ -34,18 +36,18 @@ class Parser {
   displaySemanticError(msg, showLineNumber = true) {
     throw new SyntaxError(`Semantic error ${this.currentToken.lineNumber ? `at line# ${this.currentToken.lineNumber}` : ''} :\n  ${msg}`);
     // console.log('-'.repeat(70));
-}
+  }
 
 
   parseS() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseS()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseS()"
     );
 
     this.SymbolTable.scope_stack.push(0);
@@ -59,12 +61,12 @@ class Parser {
       ) {
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "parse sst "
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "parse sst "
         );
         if (this.parseS()) {
           return true;
@@ -72,12 +74,12 @@ class Parser {
       } else if (this.Access_modifier()) {
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "class found!"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "class found!"
         );
         if (this.Class()) {
           if (this.parseS()) {
@@ -106,25 +108,24 @@ class Parser {
   parseSST() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseSST()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseSST()"
     );
     this.TypeChecker = new TypeCheckingInfo();
     if (this.Expression()) {
       if (this.currentToken.lexeme === ";") {
-        
-        if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+
+        if (this.TypeChecker.left_operand_type !== "" && (this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== "") {
           console.log("working")
-        if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
-          this.displaySemanticError("TYPE MISMATCH ERROR");
-          this.SymbolTable.print_scope_table();
-          
+          if (!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type, this.TypeChecker.right_operand_type, this.TypeChecker.operator)) {
+            this.displaySemanticError("TYPE MISMATCH ERROR");
+            this.SymbolTable.print_scope_table();
+          }
         }
-      }
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         return true;
@@ -149,14 +150,14 @@ class Parser {
     } else if (this.TS()) {
       if (this.Expression()) {
         if (this.currentToken.lexeme === ";") {
-          if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+          if (this.TypeChecker.left_operand_type !== "" && (this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== "") {
             console.log("working")
-          if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
-            this.displaySemanticError("TYPE MISMATCH ERROR");
-            this.SymbolTable.print_scope_table();
-            
+            if (!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type, this.TypeChecker.right_operand_type, this.TypeChecker.operator)) {
+              this.displaySemanticError("TYPE MISMATCH ERROR");
+              this.SymbolTable.print_scope_table();
+
+            }
           }
-        }
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           return true;
@@ -176,12 +177,12 @@ class Parser {
   parseSST1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseSST1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseSST1()"
     );
 
     if (this.Array_def()) {
@@ -228,12 +229,12 @@ class Parser {
   TS() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "TS()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "TS()"
     );
 
     if (
@@ -263,23 +264,23 @@ class Parser {
   parseInit() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseInit()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseInit()"
     );
 
     if (this.currentToken.lexeme === "=") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "assignment operator found! "
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "assignment operator found! "
       );
       this.TypeChecker.operator = this.currentToken.lexeme;
       this.currentIndex += 1;
@@ -288,12 +289,12 @@ class Parser {
       if (this.Expression()) {
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "Expression completed! "
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "Expression completed! "
         );
         return true;
       }
@@ -309,12 +310,12 @@ class Parser {
   parseInitList() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseInitList()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseInitList()"
     );
 
     if (this.currentToken.lexeme === ",") {
@@ -341,23 +342,23 @@ class Parser {
   ClassparseInit() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseInit()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseInit()"
     );
 
     if (this.currentToken.lexeme === "=") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "assignment operator found! "
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "assignment operator found! "
       );
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
@@ -365,12 +366,12 @@ class Parser {
         if (this.Expression()) {
           console.log(
             this.currentToken.class +
-              " " +
-              this.currentToken.lexeme +
-              " ON LINE - " +
-              this.currentToken.lineNumber +
-              " " +
-              "Expression completed! "
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "Expression completed! "
           );
           return true;
         }
@@ -429,12 +430,12 @@ class Parser {
   ClassparseInitList() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseInitList()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseInitList()"
     );
 
     if (this.currentToken.lexeme === ",") {
@@ -457,17 +458,17 @@ class Parser {
       return false;
     }
   }
- 
+
   // Parser   for Declaration
   parseDeclaration() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseDeclaration()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseDeclaration()"
     );
     if (this.currentToken.class === "CREATE") {
       this.currentIndex += 1;
@@ -477,67 +478,67 @@ class Parser {
         this.TypeChecker.left_operand_type = this.currentToken.lexeme;
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "data type found!"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "data type found!"
         );
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.currentToken.class === "VARIABLE") {
-          
+
           this.ScopeTableEntry.name = this.currentToken.lexeme;
-        
+
 
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           console.log(
             this.currentToken.class +
-              " " +
-              this.currentToken.lexeme +
-              " ON LINE - " +
-              this.currentToken.lineNumber +
-              " " +
-              "var found!"
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "var found!"
           );
 
           if (this.parseInit()) {
             console.log(
               this.currentToken.class +
-                " " +
-                this.currentToken.lexeme +
-                " ON LINE - " +
-                this.currentToken.lineNumber +
-                " " +
-                "init parsing found!"
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "init parsing found!"
             );
 
             if (this.parseInitList()) {
               console.log(
                 this.currentToken.class +
-                  " " +
-                  this.currentToken.lexeme +
-                  " ON LINE - " +
-                  this.currentToken.lineNumber +
-                  " " +
-                  "init parsing list  found!"
+                " " +
+                this.currentToken.lexeme +
+                " ON LINE - " +
+                this.currentToken.lineNumber +
+                " " +
+                "init parsing list  found!"
               );
 
               if (this.currentToken.lexeme === ";") {
                 console.log(this.TypeChecker)
-               
-        if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
-          this.displaySemanticError("REDECLARATION ERROR");
-          this.SymbolTable.print_scope_table();
+                
+                if (!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)) {
+                  this.displaySemanticError("REDECLARATION ERROR");
+                  this.SymbolTable.print_scope_table();
 
-        }
-        if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
-          this.displaySemanticError("TYPE MISMATCH ERROR");
-          this.SymbolTable.print_scope_table();
-          
-        }
+                }
+                if (!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type, this.TypeChecker.right_operand_type, this.TypeChecker.operator)) {
+                  this.displaySemanticError("TYPE MISMATCH ERROR");
+                  this.SymbolTable.print_scope_table();
+
+                }
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
                 return true;
@@ -557,23 +558,23 @@ class Parser {
   parseReturn() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseReturn()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseReturn()"
     );
 
     if (this.currentToken.lexeme === "return") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "return success"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "return success"
       );
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
@@ -603,24 +604,24 @@ class Parser {
   parseReturn1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseReturn1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseReturn1()"
     );
 
     if (this.Expression()) {
       if (this.currentToken.lexeme === ";") {
-        if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+        if (this.TypeChecker.left_operand_type !== "" && (this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== "") {
           console.log("working")
-        if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
-          this.displaySemanticError("TYPE MISMATCH ERROR");
-          this.SymbolTable.print_scope_table();
-          
+          if (!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type, this.TypeChecker.right_operand_type, this.TypeChecker.operator)) {
+            this.displaySemanticError("TYPE MISMATCH ERROR");
+            this.SymbolTable.print_scope_table();
+
+          }
         }
-      }
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         return true;
@@ -637,12 +638,12 @@ class Parser {
   parseBreak() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseBreak()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseBreak()"
     );
 
     if (this.currentToken.lexeme === "break") {
@@ -657,12 +658,12 @@ class Parser {
   parseContinue() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseContinue()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseContinue()"
     );
 
     if (this.currentToken.lexeme === "continue") {
@@ -677,12 +678,12 @@ class Parser {
   inc_dec() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "inc_dec()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "inc_dec()"
     );
 
     if (this.inc_dec_opt()) {
@@ -695,18 +696,18 @@ class Parser {
   inc_dec_opt() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "inc_dec_opt()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "inc_dec_opt()"
     );
 
     if (this.currentToken.lexeme === "++") {
       this.TypeChecker.operator = this.currentToken.lexeme;
       console.log(this.TypeChecker)
-      if(!this.SymbolTable.check_compatibility_unary_op(this.TypeChecker.left_operand_type, this.TypeChecker.operator)){
+      if (!this.SymbolTable.check_compatibility_unary_op(this.TypeChecker.left_operand_type, this.TypeChecker.operator)) {
         this.displaySemanticError("TYPE MISMATCH ERROR !");
       }
       this.currentIndex += 1;
@@ -725,63 +726,63 @@ class Parser {
   parseIfElse() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseIfElse()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseIfElse()"
     );
 
     if (this.currentToken.lexeme === "if") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "if found!"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "if found!"
       );
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.lexeme === "(") {
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "starting braces found!"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "starting braces found!"
         );
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.Expression()) {
-          if(this.TypeChecker.left_operand_type !== "" && ( this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== ""){
+          if (this.TypeChecker.left_operand_type !== "" && (this.TypeChecker.right_operand_type.data_type !== "") && this.operator !== "") {
             console.log("working")
-          if(!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type,this.TypeChecker.right_operand_type,this.TypeChecker.operator)){
-            this.displaySemanticError("TYPE MISMATCH ERROR");
-            this.SymbolTable.print_scope_table();
-            
+            if (!this.SymbolTable.check_compatibility_binary_op(this.TypeChecker.left_operand_type, this.TypeChecker.right_operand_type, this.TypeChecker.operator)) {
+              this.displaySemanticError("TYPE MISMATCH ERROR");
+              this.SymbolTable.print_scope_table();
+
+            }
           }
-        }
           if (this.currentToken.lexeme === ")") {
             console.log(
               this.currentToken.class +
-                " " +
-                this.currentToken.lexeme +
-                " ON LINE - " +
-                this.currentToken.lineNumber +
-                " " +
-                "ending braces found!"
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "ending braces found!"
             );
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.body()) {
-              
+
               if (this.else()) {
-              
+
                 return true;
               }
             }
@@ -797,16 +798,16 @@ class Parser {
   body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "body()"
     );
     const current_scope = this.SymbolTable.create_scope();
-  
-  this.ScopeTableEntry.scope = current_scope;
+
+    this.ScopeTableEntry.scope = current_scope;
     if (this.parseSST()) {
       return true;
     } else if (this.currentToken.lexeme === "{") {
@@ -815,6 +816,7 @@ class Parser {
       if (this.parseMST()) {
         if (this.currentToken.lexeme === "}") {
           this.SymbolTable.destroy_scope();
+          this.ScopeTableEntry.scope = 0;
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           return true;
@@ -829,12 +831,12 @@ class Parser {
   parseMST() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseMST()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseMST()"
     );
 
     if (this.parseSST()) {
@@ -854,12 +856,12 @@ class Parser {
   else() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "else()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "else()"
     );
 
     if (this.currentToken.lexeme === "else") {
@@ -913,12 +915,12 @@ class Parser {
   parseCycleLoop() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseCycleLoop()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseCycleLoop()"
     );
 
     if (this.currentToken.lexeme === "cycle") {
@@ -938,12 +940,12 @@ class Parser {
   loopCases() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "loopCases()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "loopCases()"
     );
     if (this.currentToken.lexeme === "(") {
       this.currentIndex += 1;
@@ -957,23 +959,23 @@ class Parser {
             console.log("semi col found in cycle");
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
-          
-                if (this.currentToken.class === "VARIABLE") {
-                  console.log("VARIABLE  found in cycle");
 
+            if (this.currentToken.class === "VARIABLE") {
+              console.log("VARIABLE  found in cycle");
+
+              this.currentIndex += 1;
+              this.currentToken = this.lexer[this.currentIndex];
+              if (this.currentToken.lexeme === "++") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                console.log("++  found in cycle");
+                if (this.currentToken.lexeme === ")") {
                   this.currentIndex += 1;
                   this.currentToken = this.lexer[this.currentIndex];
-                  if (this.currentToken.lexeme === "++") {
-                    this.currentIndex += 1;
-                    this.currentToken = this.lexer[this.currentIndex];
-                    console.log("++  found in cycle");
-                    if (this.currentToken.lexeme === ")") {
-                      this.currentIndex += 1;
-                      this.currentToken = this.lexer[this.currentIndex];
-                      return true;
-                    }
-                  }
-              
+                  return true;
+                }
+              }
+
             }
           }
         }
@@ -1030,12 +1032,12 @@ class Parser {
   parseCycleLoopBody() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseCycleLoopBody()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseCycleLoopBody()"
     );
 
     if (this.parseSST()) {
@@ -1059,26 +1061,27 @@ class Parser {
   parseTryExcept() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseTryExcept()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseTryExcept()"
     );
 
     if (this.currentToken.lexeme === "try") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.lexeme === "{") {
-       const create_scope = this.SymbolTable.create_scope();
+        const create_scope = this.SymbolTable.create_scope();
 
-       this.ScopeTableEntry.scope = create_scope;
+        this.ScopeTableEntry.scope = create_scope;
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
         if (this.parseMST()) {
           if (this.currentToken.lexeme === "}") {
             this.SymbolTable.destroy_scope();
+            this.ScopeTableEntry.scope = 0;
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.tryRest()) {
@@ -1095,12 +1098,12 @@ class Parser {
   tryRest() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "tryRest()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "tryRest()"
     );
     if (this.currentToken.lexeme === "catch") {
       this.currentIndex += 1;
@@ -1110,51 +1113,51 @@ class Parser {
         this.ScopeTableEntry.scope = create_scope
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
-       
-        if(this.currentToken.class === "VARIABLE"){
-          
-          this.ScopeTableEntry.type = this.currentToken.lexeme;
-       
-          this.currentIndex += 1;
-          this.currentToken = this.lexer[this.currentIndex]; 
-          this.trycatcherrors.isTypeExist = false;
-         
-          for (let i = 0; i < this.trycatcherrors.list.length; i++) {
-            // console.log(this.trycatcherrors.list[i]);
-            if(this.ScopeTableEntry.type === this.trycatcherrors.list[i] ){
-                this.trycatcherrors.isTypeExist = true;
-            }
-          }  
 
-          if(this.trycatcherrors.isTypeExist === false){
-            
-            this.displaySemanticError("ERROR DOESN'T EXIST");
-          }
         if (this.currentToken.class === "VARIABLE") {
-          this.ScopeTableEntry.name = this.currentToken.lexeme;
-          this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)
+
+          this.ScopeTableEntry.type = this.currentToken.lexeme;
+
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
-          if (this.currentToken.lexeme === ")") {
+          this.trycatcherrors.isTypeExist = false;
+
+          for (let i = 0; i < this.trycatcherrors.list.length; i++) {
+            // console.log(this.trycatcherrors.list[i]);
+            if (this.ScopeTableEntry.type === this.trycatcherrors.list[i]) {
+              this.trycatcherrors.isTypeExist = true;
+            }
+          }
+
+          if (this.trycatcherrors.isTypeExist === false) {
+
+            this.displaySemanticError("ERROR DOESN'T EXIST");
+          }
+          if (this.currentToken.class === "VARIABLE") {
+            this.ScopeTableEntry.name = this.currentToken.lexeme;
+            this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
-            if (this.currentToken.lexeme === "{") {
+            if (this.currentToken.lexeme === ")") {
               this.currentIndex += 1;
               this.currentToken = this.lexer[this.currentIndex];
-              if (this.parseMST()) {
-                if (this.currentToken.lexeme === "}") {
-                  this.SymbolTable.destroy_scope();
-
-                  this.currentIndex += 1;
-                  this.currentToken = this.lexer[this.currentIndex];
-                  if (this.tryRest()) {
-                    return true;
+              if (this.currentToken.lexeme === "{") {
+                this.currentIndex += 1;
+                this.currentToken = this.lexer[this.currentIndex];
+                if (this.parseMST()) {
+                  if (this.currentToken.lexeme === "}") {
+                    this.SymbolTable.destroy_scope();
+                    this.ScopeTableEntry.scope = 0;
+                    this.currentIndex += 1;
+                    this.currentToken = this.lexer[this.currentIndex];
+                    if (this.tryRest()) {
+                      return true;
+                    }
                   }
                 }
               }
             }
           }
-        }
         }
       }
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
@@ -1168,12 +1171,12 @@ class Parser {
   try_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "try_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "try_body()"
     );
 
     if (this.parseSST()) {
@@ -1197,12 +1200,12 @@ class Parser {
   except() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "except()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "except()"
     );
 
     if (this.currentToken.lexeme === "except") {
@@ -1223,12 +1226,12 @@ class Parser {
   except_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "except_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "except_body()"
     );
 
     if (this.parseSST()) {
@@ -1252,15 +1255,16 @@ class Parser {
   func_dec() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "func_dec()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "func_dec()"
     );
     this.functionData = new MemberType();
 
+    
     if (this.currentToken.type === "DataType") {
       this.functionData.is_function = true;
       this.functionData.func_return_type = this.currentToken.lexeme;
@@ -1269,7 +1273,7 @@ class Parser {
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.class === "VARIABLE") {
 
-      this.functionData.func_name = this.currentToken.lexeme;
+        this.functionData.func_name = this.currentToken.lexeme;
 
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
@@ -1279,24 +1283,24 @@ class Parser {
           if (this.PARAMLIST()) {
             console.log(
               this.currentToken.class +
-                " " +
-                this.currentToken.lexeme +
-                " ON LINE - " +
-                this.currentToken.lineNumber +
-                " " +
-                "expression comp"
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "expression comp"
             );
             if (this.currentToken.lexeme === ")") {
               // console.log(this.functionData)
-             this.ScopeTableEntry.type = this.functionData.toString(this.functionData.is_function)
-             this.ScopeTableEntry.name = this.functionData.func_name
-             this.ScopeTableEntry.scope -=1
-            if(!this.SymbolTable.lookup_function(this.functionData.func_name,this.functionData.func_param_type_list.join(','))){
-              this.displaySemanticError("FUNCTION ALREADY DECLARED!")
-            }
-             this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)
+              this.ScopeTableEntry.type = this.functionData.toString(this.functionData.is_function)
+              this.ScopeTableEntry.name = this.functionData.func_name
+              this.ScopeTableEntry.scope -= 1
+              if (!this.SymbolTable.lookup_function(this.functionData.func_name, this.functionData.func_param_type_list.join(','))) {
+                this.displaySemanticError("FUNCTION ALREADY DECLARED!")
+              }
+              this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)
 
-              
+
               this.currentIndex += 1;
               this.currentToken = this.lexer[this.currentIndex];
               if (this.func_body()) {
@@ -1330,23 +1334,23 @@ class Parser {
   PARAMLIST() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "PARAMLIST()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "PARAMLIST()"
     );
     const current_scope = this.SymbolTable.create_scope();
-  
+
     this.ScopeTableEntry.scope = current_scope;
 
     if (this.type()) {
       if (this.currentToken.class === "VARIABLE") {
-        
+
         this.ScopeTableEntry.name = this.currentToken.lexeme
-        
-        if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+
+        if (!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)) {
           this.displaySemanticError("REDECLARATION ERROR");
           this.SymbolTable.print_scope_table();
 
@@ -1360,7 +1364,7 @@ class Parser {
       throw new SyntaxError("INVALID SYNTAX: " + this.currentToken.lexeme);
     } else if (this.currentToken
       .lexeme === ")") {
-      
+
       return true;
     } else {
       console.log("paramlist () false")
@@ -1372,28 +1376,32 @@ class Parser {
   type() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "type()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "type()"
     );
     if (
       this.currentToken.class === "VARIABLE" ||
       this.currentToken.type === "DataType"
     ) {
-      
+
       this.ScopeTableEntry.type = this.currentToken.lexeme
-      if(this.functionData){
+      
+       if (this.functionData) {
+        
         this.functionData.func_param_type_list.push(this.currentToken.lexeme)
-      }else{
-      this.MemberTableEntry.type.func_param_type_list.push(this.currentToken.lexeme)
+      } if(this.MemberTableEntry) {
+        
+
+        this.MemberTableEntry.type.func_param_type_list.push(this.currentToken.lexeme)
       }
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
-    } 
+    }
     else {
       console.log("type () false")
       return false;
@@ -1402,12 +1410,12 @@ class Parser {
   PL2() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "PL2()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "PL2()"
     );
     if (this.currentToken.lexeme === ",") {
       this.currentIndex += 1;
@@ -1415,10 +1423,10 @@ class Parser {
       if (this.type()) {
         if (this.currentToken.class === "VARIABLE") {
           this.ScopeTableEntry.name = this.currentToken.lexeme
-          if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+          if (!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)) {
             this.displaySemanticError("REDECLARATION ERROR");
             this.SymbolTable.print_scope_table();
-  
+
           }
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
@@ -1441,20 +1449,21 @@ class Parser {
   func_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "func_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "func_body()"
     );
-      this.ScopeTableEntry.scope +=1
+    this.ScopeTableEntry.scope += 1
     if (this.currentToken.lexeme === "{") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.parseMST()) {
         if (this.currentToken.lexeme === "}") {
-            this.SymbolTable.destroy_scope();
+          this.SymbolTable.destroy_scope();
+          this.ScopeTableEntry.scope = 0;
 
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
@@ -1507,22 +1516,22 @@ class Parser {
   Array_def() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Array_def()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Array_def()"
     );
-    
+
     if (this.currentToken.lexeme === "list") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Arr_type()) {
         if (this.currentToken.class === "VARIABLE") {
-          
-          if(this.MemberTableEntry){
-          this.MemberTableEntry.name = this.currentToken.lexeme;
+
+          if (this.MemberTableEntry) {
+            this.MemberTableEntry.name = this.currentToken.lexeme;
           } else {
             this.ScopeTableEntry.name = this.currentToken.lexeme;
           }
@@ -1548,8 +1557,8 @@ class Parser {
 
   Arr_type() {
     if (this.currentToken.type === "DataType") {
-      if(this.MemberTableEntry){
-      this.MemberTableEntry.var_type = this.currentToken.lexeme;
+      if (this.MemberTableEntry) {
+        this.MemberTableEntry.var_type = this.currentToken.lexeme;
       } else {
         this.ScopeTableEntry.type = this.currentToken.lexeme;
 
@@ -1577,12 +1586,12 @@ class Parser {
   body_Arr() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "body_Arr()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "body_Arr()"
     );
 
     if (this.currentToken.lexeme === "[") {
@@ -1593,17 +1602,17 @@ class Parser {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.currentToken.lexeme === ";") {
-            
-           
-            if(this.MemberTableEntry){
-             if(!this.SymbolTable.insert_into_member_table(this.MemberTableEntry)){
-              this.displaySemanticError("REDECLARATION ERROR!")
-             }
-            }else {
-              if(!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)){
+
+
+            if (this.MemberTableEntry) {
+              if (!this.SymbolTable.insert_into_member_table(this.MemberTableEntry)) {
+                this.displaySemanticError("REDECLARATION ERROR!")
+              }
+            } else {
+              if (!this.SymbolTable.insert_into_scope_table(this.ScopeTableEntry)) {
                 this.displaySemanticError("REDECLARATION ERROR");
                 this.SymbolTable.print_scope_table();
-      
+
               }
             }
             this.currentIndex += 1;
@@ -1621,12 +1630,12 @@ class Parser {
   inside_Arr_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "inside_Arr_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "inside_Arr_body()"
     );
     if (this.body_Arr()) {
       if (this.a()) {
@@ -1659,12 +1668,12 @@ class Parser {
   rpt2() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "rpt2()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "rpt2()"
     );
 
     if (this.currentToken.lexeme === ",") {
@@ -1683,12 +1692,12 @@ class Parser {
   Arr_func() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Arr_func()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Arr_func()"
     );
 
     if (this.currentToken.lexeme === ".") {
@@ -1705,12 +1714,12 @@ class Parser {
   Array_call_func() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Array_call_func()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Array_call_func()"
     );
 
     if (this.currentToken.lexeme === "append") {
@@ -1747,12 +1756,12 @@ class Parser {
   append_value() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "append_value()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "append_value()"
     );
 
     if (this.currentToken.class === "VARIABLE") {
@@ -1771,12 +1780,12 @@ class Parser {
   Array_call() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Array_call()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Array_call()"
     );
 
     if (this.currentToken.lexeme === "[") {
@@ -1834,28 +1843,53 @@ class Parser {
       return false;
     }
   }
+  func_split(paramlist){
+    return this.split_arr = paramlist.split('->')
+  }
+  func_type_check(param1,param2){
+  
+    if(param1 === param2){
+      console.log("matched")
+      return true;
+    }else{
+      console.log("not matched")
+
+      return false;
+    }
+  }
 
   func_call() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "func_call()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "func_call()"
     );
+    console.log("at func call :")
+    console.log(this.func_data_type)
 
+    this.result = this.func_split(this.func_data_type)
+    console.log("result :")
+    console.log(this.result)
     if (this.currentToken.lexeme === "(") {
+       this.func_check = new func_data_type_check();
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
-      if (this.Expression()) {
+      if (this.func_call_list()) {
+        if(!this.func_type_check(this.func_check.paramlist.join(','),this.result[0])){
+          this.displaySemanticError("FUNCTION TYPE MISMATCH ERROR")
+        }
+        
         if (this.currentToken.lexeme === ")") {
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.L()) {
             return true;
           }
+
         }
       }
     } else {
@@ -1863,6 +1897,33 @@ class Parser {
     }
   }
 
+  func_call_list() {
+    if (this.Expression()) {
+      if (this.func_call_a()) {
+        return true;
+      }
+
+    }
+    else {
+      return false
+    }
+  }
+
+  func_call_a() {
+    if (this.currentToken.lexeme === ',') {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.func_call_list()) {
+        return true;
+      }
+    } else if(this.currentToken.lexeme === ")"){
+      return true;
+    }
+    else {
+      return false;
+
+    }
+  }
   L() {
     // if (this.currentToken.lexeme === "[") {
     //   this.currentIndex += 1;
@@ -1877,7 +1938,12 @@ class Parser {
     //     }
     //   }
     // }
-    if (this.F2()) {
+    if (this.currentToken.lexeme === ";") {
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      return true;
+    }
+    else if (this.F2()) {
       if (this.L()) {
         return true;
       }
@@ -1918,12 +1984,12 @@ class Parser {
   func_call_value() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "func_call_value()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "func_call_value()"
     );
 
     if (this.Expression()) {
@@ -1938,12 +2004,12 @@ class Parser {
   rpt3() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "rpt3()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "rpt3()"
     );
 
     if (this.currentToken.lexeme === ",") {
@@ -1994,12 +2060,12 @@ class Parser {
   object_call() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "object_call()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "object_call()"
     );
 
     if (this.call()) {
@@ -2012,12 +2078,12 @@ class Parser {
   call() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "call()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "call()"
     );
 
     if (this.currentToken.lexeme === ".") {
@@ -2042,12 +2108,12 @@ class Parser {
   recall() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "recall()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "recall()"
     );
 
     if (this.call()) {
@@ -2109,12 +2175,12 @@ class Parser {
   classElse() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "else()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "else()"
     );
 
     if (this.currentToken.lexeme === "else") {
@@ -2151,35 +2217,35 @@ class Parser {
   parseClassIfElse() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parseIfElse()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parseIfElse()"
     );
 
     if (this.currentToken.lexeme === "if") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "if found!"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "if found!"
       );
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.currentToken.lexeme === "(") {
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "starting braces found!"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "starting braces found!"
         );
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
@@ -2187,12 +2253,12 @@ class Parser {
           if (this.currentToken.lexeme === ")") {
             console.log(
               this.currentToken.class +
-                " " +
-                this.currentToken.lexeme +
-                " ON LINE - " +
-                this.currentToken.lineNumber +
-                " " +
-                "ending braces found!"
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "ending braces found!"
             );
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
@@ -2224,12 +2290,12 @@ class Parser {
   classifelsebody() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "body()"
     );
 
     if (this.parseCMST()) {
@@ -2252,12 +2318,12 @@ class Parser {
   Class() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Class()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Class()"
     );
     this.DefinitionTableEntry = new DefinitionTableEntry();
 
@@ -2271,12 +2337,12 @@ class Parser {
         this.DefinitionTableEntry.name = this.currentToken.lexeme;
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "var found!"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "var found!"
         );
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
@@ -2284,12 +2350,12 @@ class Parser {
         if (this.Inheritance()) {
           console.log(
             this.currentToken.class +
-              " " +
-              this.currentToken.lexeme +
-              " ON LINE - " +
-              this.currentToken.lineNumber +
-              " " +
-              "inh true"
+            " " +
+            this.currentToken.lexeme +
+            " ON LINE - " +
+            this.currentToken.lineNumber +
+            " " +
+            "inh true"
           );
           if (this.opt_imp()) {
             if (this.class_body()) {
@@ -2307,20 +2373,20 @@ class Parser {
   Access_modifier() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Access_modifier()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Access_modifier()"
     );
     this.MemberTableEntry = new MemberTableEntry();
 
     if (this.currentToken.class === "AccessModifiers") {
 
       this.DefinitionTableEntry.access_modifier = this.currentToken.lexeme;
-      
-      
+
+
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       return true;
@@ -2342,43 +2408,43 @@ class Parser {
   Inheritance() {
     console.log(
       this.currentToken.class +
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Inheritance()"
+    );
+
+    if (this.currentToken.lexeme === "extends") {
+
+      console.log(
+        this.currentToken.class +
         " " +
         this.currentToken.lexeme +
         " ON LINE - " +
         this.currentToken.lineNumber +
         " " +
-        "Inheritance()"
-    );
+        "extends found"
+      );
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "VARIABLE") {
 
-    if (this.currentToken.lexeme === "extends") {
-      
-      console.log(
-        this.currentToken.class +
+        if (!this.SymbolTable.lookup_definition_table(this.currentToken.lexeme)) {
+          this.displaySemanticError("UNDEFINED PARENT CLASS")
+        }
+        this.DefinitionTableEntry.parent_class = this.currentToken.lexeme;
+
+
+        console.log(
+          this.currentToken.class +
           " " +
           this.currentToken.lexeme +
           " ON LINE - " +
           this.currentToken.lineNumber +
           " " +
-          "extends found"
-      );
-      this.currentIndex += 1;
-      this.currentToken = this.lexer[this.currentIndex];
-      if (this.currentToken.class === "VARIABLE") {
-   
-        if(!this.SymbolTable.lookup_definition_table(this.currentToken.lexeme)){
-          this.displaySemanticError("UNDEFINED PARENT CLASS")
-        }
-        this.DefinitionTableEntry.parent_class = this.currentToken.lexeme;
-         
-
-        console.log(
-          this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "extends var found"
+          "extends var found"
         );
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
@@ -2400,42 +2466,42 @@ class Parser {
   opt_imp() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "opt_imp()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "opt_imp()"
     );
 
     if (this.currentToken.lexeme === "implements") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "implement found"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "implement found"
       );
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
 
       if (this.currentToken.class === "VARIABLE") {
-        if(!this.SymbolTable.lookup_definition_table(this.currentToken.lexeme)){
+        if (!this.SymbolTable.lookup_definition_table(this.currentToken.lexeme)) {
           this.displaySemanticError("UNDEFINED INTERFACE!")
         }
-        
+
 
         this.DefinitionTableEntry.implements_list.push(this.currentToken.lexeme)
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "extends var found"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "extends var found"
         );
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
@@ -2445,11 +2511,11 @@ class Parser {
       }
       throw new SyntaxError(
         "INVALID SYNTAX: " +
-          this.currentToken.lexeme +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber
+        this.currentToken.lexeme +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber
       );
     } else if (this.currentToken.lexeme === "{") {
       return true;
@@ -2461,30 +2527,30 @@ class Parser {
   class_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "class_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "class_body()"
     );
 
-   const bool = this.SymbolTable.insert_into_definition_table(this.DefinitionTableEntry)
-      if(bool === false){
-        this.displaySemanticError("Class Already Defined!")
-      }
+    const bool = this.SymbolTable.insert_into_definition_table(this.DefinitionTableEntry)
+    if (bool === false) {
+      this.displaySemanticError("Class Already Defined!")
+    }
 
     if (this.currentToken.lexeme === "{") {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "class csst in c body"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "class csst in c body"
       );
       if (this.CSST()) {
         console.log("came out of csst" + this.currentToken.lexeme);
@@ -2506,12 +2572,12 @@ class Parser {
   CMST() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "CMST()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "CMST()"
     );
 
     if (this.parseReturn()) {
@@ -2537,10 +2603,10 @@ class Parser {
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       if (this.Access_modifier()) {
-     
 
-        
-        
+
+
+
         if (this.classVarDeclaration()) {
           return true;
         }
@@ -2555,16 +2621,23 @@ class Parser {
   class_Dec() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "class_Dec()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "class_Dec()"
     );
 
     if (this.Access_modifier()) {
-     
+      this.currentIndex -= 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "AccessModifiers") {
+
+        this.MemberTableEntry.access_modifier = this.currentToken.lexeme;
+      }
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
       if (this.classVarDeclaration()) {
         return true;
       }
@@ -2575,17 +2648,18 @@ class Parser {
   classVarDeclaration() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "classVarDeclaration()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "classVarDeclaration()"
     );
 
     if (this.IFStatic()) {
       if (this.currentToken.type === "DataType") {
         
+
         this.MemberTableEntry.var_type = this.currentToken.lexeme
         this.currentIndex += 1;
         this.currentToken = this.lexer[this.currentIndex];
@@ -2593,48 +2667,48 @@ class Parser {
           this.MemberTableEntry.name = this.currentToken.lexeme
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
-         
+
           if (this.ClassparseInit()) {
             console.log(
               this.currentToken.class +
+              " " +
+              this.currentToken.lexeme +
+              " ON LINE - " +
+              this.currentToken.lineNumber +
+              " " +
+              "init parsing found!"
+            );
+            if (this.ClassparseInitList()) {
+              console.log(
+                this.currentToken.class +
                 " " +
                 this.currentToken.lexeme +
                 " ON LINE - " +
                 this.currentToken.lineNumber +
                 " " +
-                "init parsing found!"
-            );
-            if (this.ClassparseInitList()) {
-              console.log(
-                this.currentToken.class +
-                  " " +
-                  this.currentToken.lexeme +
-                  " ON LINE - " +
-                  this.currentToken.lineNumber +
-                  " " +
-                  "init parsing list found!"
+                "init parsing list found!"
               );
               if (this.currentToken.lexeme === ";") {
 
-             if(!this.SymbolTable.insert_into_member_table(this.MemberTableEntry)){
-              this.displaySemanticError("REDECLARATION ERROR!")
-             }
-            
+                if (!this.SymbolTable.insert_into_member_table(this.MemberTableEntry)) {
+                  this.displaySemanticError("REDECLARATION ERROR!")
+                }
+
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
                 return true;
               }
-            }  
-              
-          } 
+            }
+
+          }
         }
       }
     } else if (this.currentToken.lexeme === ")") {
       return true;
-    } else if (this.currentToken.lexeme === "}"){
+    } else if (this.currentToken.lexeme === "}") {
       return true;
 
-    } 
+    }
     else {
       return false;
     }
@@ -2643,12 +2717,12 @@ class Parser {
   IFStatic() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "IFStatic()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "IFStatic()"
     );
 
     if (this.currentToken.lexeme === "static") {
@@ -2666,39 +2740,39 @@ class Parser {
   class_method() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "class_method()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "class_method()"
     );
 
 
-    
+
 
     if (this.Access_modifier()) {
-           this.currentIndex -= 1;
-            this.currentToken = this.lexer[this.currentIndex];
-            if(this.currentToken.class === "AccessModifiers"){
+      this.currentIndex -= 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      if (this.currentToken.class === "AccessModifiers") {
 
-              this.MemberTableEntry.access_modifier = this.currentToken.lexeme;
-            }
+        this.MemberTableEntry.access_modifier = this.currentToken.lexeme;
+      }
       this.currentIndex += 1;
-            this.currentToken = this.lexer[this.currentIndex];
+      this.currentToken = this.lexer[this.currentIndex];
 
       if (this.IFStatic()) {
         // console.log("static checked")
-       
+
         if (this.currentToken.class === "DataTypes") {
-   
+
           this.MemberTableEntry.type.is_function = true;
           this.MemberTableEntry.type.func_return_type = this.currentToken.lexeme
           this.currentIndex += 1;
           this.currentToken = this.lexer[this.currentIndex];
           if (this.currentToken.class === "VARIABLE") {
             this.MemberTableEntry.name = this.currentToken.lexeme
-           
+
             this.currentIndex += 1;
             this.currentToken = this.lexer[this.currentIndex];
             if (this.currentToken.lexeme === "(") {
@@ -2710,24 +2784,24 @@ class Parser {
                   this.MemberTableEntry.var_type = this.MemberTableEntry.type.toString(this.MemberTableEntry.type.is_function)
                   console.log("params ends : ")
                   console.log(this.MemberTableEntry)
-             this.ScopeTableEntry.scope -=1
-             console.log("classs name current : ") 
-             console.log(this.DefinitionTableEntry.name)
-             console.log("func name : ")
-             console.log(this.MemberTableEntry.name)
-             console.log("param list : ")
-             console.log(this.MemberTableEntry.type)
-        if(!this.SymbolTable.lookup_member_table_func(this.MemberTableEntry.name, this.MemberTableEntry.type.func_param_type_list,this.DefinitionTableEntry.name)){
-          this.displaySemanticError("FUNCTION ALREADY DECLARED")
-        }
-        
-          
-             this.SymbolTable.insert_into_member_table(this.MemberTableEntry)
+                  this.ScopeTableEntry.scope -= 1
+                  console.log("classs name current : ")
+                  console.log(this.DefinitionTableEntry.name)
+                  console.log("func name : ")
+                  console.log(this.MemberTableEntry.name)
+                  console.log("param list : ")
+                  console.log(this.MemberTableEntry.type)
+                  if (!this.SymbolTable.lookup_member_table_func(this.MemberTableEntry.name, this.MemberTableEntry.type.func_param_type_list, this.DefinitionTableEntry.name)) {
+                    this.displaySemanticError("FUNCTION ALREADY DECLARED")
+                  }
+
+
+                  this.SymbolTable.insert_into_member_table(this.MemberTableEntry)
                   this.currentIndex += 1;
                   this.currentToken = this.lexer[this.currentIndex];
                   if (this.c_method_body()) {
                     return true;
-                  }else if(this.currentToken.lexeme === ";"){
+                  } else if (this.currentToken.lexeme === ";") {
                     this.currentIndex += 1;
                     this.currentToken = this.lexer[this.currentIndex];
                     return true;
@@ -2746,12 +2820,12 @@ class Parser {
   c_method_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "c_method_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "c_method_body()"
     );
 
     if (this.currentToken.lexeme === "{") {
@@ -2772,22 +2846,22 @@ class Parser {
   CSST() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "CSST()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "CSST()"
     );
 
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "CSST found"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "CSST found"
     );
     if (this.currentToken.class === "CREATE") {
       this.currentIndex += 1;
@@ -2795,16 +2869,16 @@ class Parser {
       if (this.ParseDec()) {
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "PARSE DEC C OMPLETE"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "PARSE DEC C OMPLETE"
         );
-          if (this.CSST()) {
-            return true;
-          }
+        if (this.CSST()) {
+          return true;
+        }
 
       }
     } else if (this.Constructor()) {
@@ -2819,7 +2893,7 @@ class Parser {
       if (this.CSST()) {
         return true;
       }
-  
+
     } else if (this.currentToken.lexeme === "}") {
       return true;
     } else {
@@ -2830,23 +2904,23 @@ class Parser {
   ParseDec() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "ParseDec()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "ParseDec()"
     );
 
     if (this.class_Dec()) {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "class dec complete"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "class dec complete"
       );
       return true;
     } else if (this.object_dec()) {
@@ -2859,12 +2933,12 @@ class Parser {
   Constructor() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Constructor()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Constructor()"
     );
 
     if (this.Access_modifier()) {
@@ -2915,12 +2989,12 @@ class Parser {
   constructor_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "constructor_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "constructor_body()"
     );
 
     if (this.classVarDeclaration()) {
@@ -2940,12 +3014,12 @@ class Parser {
   constructor_MST() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "constructor_MST()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "constructor_MST()"
     );
 
     if (this.currentToken.class === "this") {
@@ -2974,12 +3048,12 @@ class Parser {
   Abstract_class() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Abstract_class()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Abstract_class()"
     );
 
     if (this.currentToken.lexeme === "abstract") {
@@ -3008,12 +3082,12 @@ class Parser {
   Abstract_body() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Abstract_body()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Abstract_body()"
     );
 
     if (this.Abstract_inside()) {
@@ -3035,12 +3109,12 @@ class Parser {
   Abstract_inside() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Abstract_inside()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Abstract_inside()"
     );
     if (this.Abstract_func_types()) {
       if (this.Abstract_inside()) {
@@ -3067,12 +3141,12 @@ class Parser {
   Abstract_func_types() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Abstract_func_types()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Abstract_func_types()"
     );
 
     if (this.Abstract_method()) {
@@ -3087,12 +3161,12 @@ class Parser {
   Abstract_method() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Abstract_method()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Abstract_method()"
     );
 
     if (this.currentToken.type === "DataType") {
@@ -3113,7 +3187,7 @@ class Parser {
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
                 return true;
-              }  else if (this.currentToken.lexeme === "{") {
+              } else if (this.currentToken.lexeme === "{") {
                 this.currentIndex += 1;
                 this.currentToken = this.lexer[this.currentIndex];
                 if (this.parseMST()) {
@@ -3123,10 +3197,10 @@ class Parser {
                     return true;
                   }
                 }
-              } 
+              }
             }
           }
-        
+
         }
       }
     } else {
@@ -3137,12 +3211,12 @@ class Parser {
   object_class() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "object_class()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "object_class()"
     );
 
     if (this.currentToken.class === "VARIABLE") {
@@ -3182,12 +3256,12 @@ class Parser {
   Expression() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Expression()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Expression()"
     );
 
     if (this.compound_Ass()) {
@@ -3204,14 +3278,14 @@ class Parser {
   Expression1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Expression1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Expression1()"
     );
-    
+
 
     if (
       this.currentToken.class === "COMPOUND_EQUAL_PLUS" ||
@@ -3251,6 +3325,8 @@ class Parser {
       return true;
     } else if (this.currentToken.lexeme === ".") {
       return true;
+    } else if (this.currentToken.lexeme === ",") {
+      return true;
     } else {
       return false;
     }
@@ -3259,12 +3335,12 @@ class Parser {
   compound_Ass() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "compound_Ass()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "compound_Ass()"
     );
 
     if (this.Assignment_opt()) {
@@ -3278,12 +3354,12 @@ class Parser {
   followOE() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "followOE()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "followOE()"
     );
 
     if (this.currentToken.type === "Operator") {
@@ -3320,12 +3396,12 @@ class Parser {
   compound_Ass1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "compound_Ass1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "compound_Ass1()"
     );
 
     if (this.currentToken.class === "ASSIGNMENT_EQUAL") {
@@ -3350,12 +3426,12 @@ class Parser {
   Assignment_opt() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Assignment_opt()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Assignment_opt()"
     );
 
     if (this.NOT()) {
@@ -3370,12 +3446,12 @@ class Parser {
   Assignment_opt1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Assignment_opt1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Assignment_opt1()"
     );
 
     if (this.currentToken.class === "NOT") {
@@ -3399,12 +3475,12 @@ class Parser {
   NOT() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "NOT()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "NOT()"
     );
 
     if (this.OR()) {
@@ -3419,12 +3495,12 @@ class Parser {
   NOT1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "NOT1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "NOT1()"
     );
 
     if (this.currentToken.class === "OR") {
@@ -3450,12 +3526,12 @@ class Parser {
   OR() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "OR()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "OR()"
     );
 
     if (this.AND()) {
@@ -3470,12 +3546,12 @@ class Parser {
   OR1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "OR1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "OR1()"
     );
 
     if (this.currentToken.class === "AND") {
@@ -3503,12 +3579,12 @@ class Parser {
   AND() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "AND()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "AND()"
     );
 
     if (this.ROP()) {
@@ -3523,12 +3599,12 @@ class Parser {
   AND1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "AND1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "AND1()"
     );
 
     if (this.currentToken.class === "RELATIONAL_OPERATOR") {
@@ -3558,12 +3634,12 @@ class Parser {
   ROP() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "ROP()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "ROP()"
     );
 
     if (this.PM()) {
@@ -3578,12 +3654,12 @@ class Parser {
   ROP1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "ROP1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "ROP1()"
     );
 
     if (this.currentToken.class === "PLUS_MINUS") {
@@ -3617,12 +3693,12 @@ class Parser {
   PM() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "PM()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "PM()"
     );
 
     if (this.MDM()) {
@@ -3637,12 +3713,12 @@ class Parser {
   PM1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "PM1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "PM1()"
     );
 
     if (this.currentToken.class === "MULTIPLY_DIVIDE_MODULUS") {
@@ -3676,12 +3752,12 @@ class Parser {
   MDM() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "MDM()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "MDM()"
     );
 
     if (this.P()) {
@@ -3712,12 +3788,12 @@ class Parser {
   MDM1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "MDM1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "MDM1()"
     );
 
     if (this.currentToken.lexeme === "+") {
@@ -3753,12 +3829,12 @@ class Parser {
   P() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "P()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "P()"
     );
 
     if (this.Dec()) {
@@ -3773,12 +3849,12 @@ class Parser {
   P1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "P1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "P1()"
     );
 
     if (this.currentToken.lexeme === "^") {
@@ -3816,12 +3892,12 @@ class Parser {
   Dec() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Dec()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Dec()"
     );
 
     if (this.F()) {
@@ -3836,17 +3912,17 @@ class Parser {
   Dec1() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "Dec1()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "Dec1()"
     );
 
     if (this.currentToken.lexeme === "++") {
       console.log("at ++ ")
-     
+
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
 
@@ -3882,58 +3958,58 @@ class Parser {
   constfollow() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "constfollow()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "constfollow()"
     );
 
     if (this.currentToken.class === "INTEGER") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "integer found !"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "integer found !"
       );
       return true;
     } else if (this.currentToken.class === "BOOLEAN") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "BOOLEAN found !"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "BOOLEAN found !"
       );
 
       return true;
     } else if (this.currentToken.class === "STRING") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "STRING found !"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "STRING found !"
       );
 
       return true;
     } else if (this.currentToken.class === "FLOATING_POINT") {
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "FLOATING_NUMBER found !"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "FLOATING_NUMBER found !"
       );
 
       return true;
@@ -3944,90 +4020,113 @@ class Parser {
   const() {
     console.log(
       this.currentToken.class +
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "const()"
+    );
+
+    if (this.currentToken.class === "INTEGER") {
+      if(this.func_check){
+        this.func_check.paramlist.push('num')
+      }
+      if(this.TypeChecker){
+      if (this.TypeChecker.left_operand_type === '') {
+        this.TypeChecker.left_operand_type = 'num'
+      } else {
+        this.TypeChecker.right_operand_type = 'num'
+
+      }
+    }
+      this.currentIndex += 1;
+      this.currentToken = this.lexer[this.currentIndex];
+      console.log(
+        this.currentToken.class +
         " " +
         this.currentToken.lexeme +
         " ON LINE - " +
         this.currentToken.lineNumber +
         " " +
-        "const()"
-    );
-
-    if (this.currentToken.class === "INTEGER") {
-      if(this.TypeChecker.left_operand_type === ''){
-        this.TypeChecker.left_operand_type = 'num'
-      }else{
-        this.TypeChecker.right_operand_type = 'num'
-
-      }
-      this.currentIndex += 1;
-      this.currentToken = this.lexer[this.currentIndex];
-      console.log(
-        this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "integer found !"
+        "integer found !"
       );
       return true;
     } else if (this.currentToken.class === "BOOLEAN") {
-      if(this.TypeChecker.left_operand_type === ''){
-        this.TypeChecker.left_operand_type = 'bool'
-      }else{
-        this.TypeChecker.right_operand_type = 'bool'
-
+      if(this.func_check){
+        this.func_check.paramlist.push('bool')
       }
+      if(this.TypeChecker){
+        if (this.TypeChecker.left_operand_type === '') {
+          this.TypeChecker.left_operand_type = 'bool'
+        } else {
+          this.TypeChecker.right_operand_type = 'bool'
+  
+        }
+      }
+     
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "BOOLEAN found !"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "BOOLEAN found !"
       );
 
       return true;
     } else if (this.currentToken.class === "STRING") {
-      if(this.TypeChecker.left_operand_type === ''){
-        this.TypeChecker.left_operand_type = 'string'
-      }else{
-        this.TypeChecker.right_operand_type = 'string'
-
+      if(this.func_check){
+        this.func_check.paramlist.push('string')
       }
+      if(this.TypeChecker){
+        if (this.TypeChecker.left_operand_type === '') {
+          this.TypeChecker.left_operand_type = 'string'
+        } else {
+          this.TypeChecker.right_operand_type = 'string'
+  
+        }
+      }
+      
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "STRING found !"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "STRING found !"
       );
 
       return true;
     } else if (this.currentToken.class === "FLOATING_POINT") {
-      if(this.TypeChecker.left_operand_type === ''){
-        this.TypeChecker.left_operand_type = 'dec'
-      }else{
-        this.TypeChecker.right_operand_type = 'dec'
-
+      if(this.func_check){
+        this.func_check.paramlist.push('dec')
       }
+      if(this.TypeChecker){
+        if (this.TypeChecker.left_operand_type === '') {
+          this.TypeChecker.left_operand_type = 'dec'
+        } else {
+          this.TypeChecker.right_operand_type = 'dec'
+  
+        }
+      }
+     
       this.currentIndex += 1;
       this.currentToken = this.lexer[this.currentIndex];
       console.log(
         this.currentToken.class +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber +
-          " " +
-          "FLOATING_NUMBER found !"
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber +
+        " " +
+        "FLOATING_NUMBER found !"
       );
 
       return true;
@@ -4039,12 +4138,12 @@ class Parser {
   F() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "F()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "F()"
     );
 
     if (this.const()) {
@@ -4066,25 +4165,34 @@ class Parser {
         return true;
       }
     } else if (this.currentToken.class === "VARIABLE") {
-      
-        console.log("at F variable")
-        console.log(this.TypeChecker)
 
       const datatype = this.SymbolTable.lookup_scope_table(this.currentToken.lexeme);
 
       //   this.TypeChecker.left_operand_type = 'dec'
-    
-    console.log(datatype)
-      if(!datatype){
+      this.func_data_type = datatype
+      if(this.func_check){
+        this.func_check.paramlist.push(datatype)
+      }
+      if(!this.MemberTableEntry){
+      if (!datatype) {
         this.displaySemanticError("VARIABLE NOT DECLARED!")
 
       }
-      if(this.TypeChecker.left_operand_type === "" || this.TypeChecker.left_operand_type.data_type === ''){
-      this.TypeChecker.left_operand_type = datatype;
-        
-      }else{
+    } else {
+      const membertablevardatatype = this.SymbolTable.lookup_member_table(this.currentToken.lexeme,this.DefinitionTableEntry.name)
+      if(!membertablevardatatype){
+        this.displaySemanticError("VARIABLE NOT DECLARED!")
+      }
+      this.func_data_type = membertablevardatatype.var_type
+      
+    }
+    
+      if (this.TypeChecker.left_operand_type === "" || this.TypeChecker.left_operand_type.data_type === '') {
+        this.TypeChecker.left_operand_type = this.func_data_type;
 
-        this.TypeChecker.right_operand_type = datatype;
+      } else {
+
+        this.TypeChecker.right_operand_type = this.func_data_type;
       }
       // if( datatype !== this.datatypecheck.isDataType(datatype)){
       //   this.displaySemanticError("Type MisMatched")
@@ -4094,12 +4202,12 @@ class Parser {
       if (this.F2()) {
         console.log(
           this.currentToken.class +
-            " " +
-            this.currentToken.lexeme +
-            " ON LINE - " +
-            this.currentToken.lineNumber +
-            " " +
-            "F2 REACHED!!!"
+          " " +
+          this.currentToken.lexeme +
+          " ON LINE - " +
+          this.currentToken.lineNumber +
+          " " +
+          "F2 REACHED!!!"
         );
         return true;
       }
@@ -4111,12 +4219,12 @@ class Parser {
   F2() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "F2()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "F2()"
     );
 
     if (this.object_call()) {
@@ -4191,12 +4299,12 @@ class Parser {
 
   interfacebody() {
     if (this.Abstract_method()) {
-      if(this.interfacebody()){
+      if (this.interfacebody()) {
 
         return true;
       }
     } else if (this.parseDeclaration()) {
-      if(this.interfacebody()){
+      if (this.interfacebody()) {
 
         return true;
       }
@@ -4211,12 +4319,12 @@ class Parser {
   parse() {
     console.log(
       this.currentToken.class +
-        " " +
-        this.currentToken.lexeme +
-        " ON LINE - " +
-        this.currentToken.lineNumber +
-        " " +
-        "parse()"
+      " " +
+      this.currentToken.lexeme +
+      " ON LINE - " +
+      this.currentToken.lineNumber +
+      " " +
+      "parse()"
     );
     this.SymbolTable.scope_stack.push(0)
     // Initialize the current token
@@ -4246,14 +4354,14 @@ class Parser {
       // this.SymbolTable.print_scope_table();
       throw new SyntaxError(
         "INVALID SYNTAX: " +
-          this.currentToken.lexeme +
-          " " +
-          this.currentToken.lexeme +
-          " ON LINE - " +
-          this.currentToken.lineNumber
+        this.currentToken.lexeme +
+        " " +
+        this.currentToken.lexeme +
+        " ON LINE - " +
+        this.currentToken.lineNumber
       );
 
-    
+
     }
   }
 
