@@ -67,12 +67,13 @@ export class ScopeTableEntry {
 }
 
 export class MemberTableEntry {
+   
   constructor() {
       this.name = "";
       this.type = new MemberType();
-      
       this.access_modifier = "private";
       this.is_static = false;
+      this.constructorVar = false;
   }
 }
 

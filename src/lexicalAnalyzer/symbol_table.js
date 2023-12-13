@@ -28,31 +28,31 @@ class SymbolTableManager {
     this.scope_stack.pop();
   }
 
-  //     check_constructor_exist() {
-  //         const def_table = this.lookup_definition_table(this.current_def_name);
+      check_constructor_exist() {
+          const def_table = this.lookup_definition_table(this.current_def_name);
 
-  //         for (const entry of def_table.member_table) {
-  //             if (entry.name === 'constructor' && entry.type.is_function) {
-  //                 return true;
-  //             }
-  //         }
+          for (const entry of def_table.member_table) {
+              if (entry.name === 'constructor' && entry.type.is_function) {
+                  return true;
+              }
+          }
 
-  //         let parentClass = def_table.parent_class;
+          let parentClass = def_table.parent_class;
 
-  //         while (parentClass !== null) {
-  //             const parentDefTable = this.lookup_definition_table(parentClass);
+          while (parentClass !== null) {
+              const parentDefTable = this.lookup_definition_table(parentClass);
 
-  //             for (const entry of parentDefTable.member_table) {
-  //                 if (entry.name === 'constructor' && entry.type.is_function) {
-  //                     return true;
-  //                 }
-  //             }
+              for (const entry of parentDefTable.member_table) {
+                  if (entry.name === 'constructor' && entry.type.is_function) {
+                      return true;
+                  }
+              }
 
-  //             parentClass = parentDefTable.parent_class;
-  //         }
+              parentClass = parentDefTable.parent_class;
+          }
 
-  //         return false;
-  //     }
+          return false;
+      }
 
   //     check_implements_interface() {
   //         const def_table = this.lookup_definition_table(this.current_def_name);
@@ -123,8 +123,12 @@ class SymbolTableManager {
   insert_into_member_table(memberTableEntry) {
     console.log(memberTableEntry)
     const memberTable = this.lookup_definition_table(this.current_def_name).member_table;
+    
     for (const entry of memberTable) {
+      
       if (entry.name === memberTableEntry.name) {
+
+
 
         if (!entry.type.is_function || !memberTableEntry.type.is_function) {
           return false;
@@ -174,7 +178,7 @@ class SymbolTableManager {
   }
 
   lookup_definition_table(name) {
-
+console.log("name " + name)
     for (const entry of this.definition_table) {
       if (entry.name === name) {
 
@@ -194,6 +198,18 @@ class SymbolTableManager {
           }
       }
   }
+  lookup_member_table_object(name, defRef) {
+    let defTable = this.lookup_definition_table(defRef);
+
+    for (const entry of defTable.member_table) {
+        if (entry.name === name && entry.constructorVar === true) {
+            
+                return entry;
+            
+        }
+    }
+
+}
 
 lookup_parent_var_this_super(name, defRef){
   console.log("working in this super")
@@ -462,19 +478,23 @@ lookup_parent_var_this_super(name, defRef){
   }
 
   print_all_member_tables() {
+    
     console.log('Member Tables: ');
     this.definition_table.forEach((def_entry) => {
+      console.log("def entry")
+      console.log(def_entry)
       const entry_tuples = def_entry.member_table.slice(1).map((entry) => ({
         Name: entry.name,
         'Access Modifier': entry.access_modifier,
-        Type: entry.var_type,
+        Type: entry.var_type !== undefined ? entry.var_type : entry.type,
         'Is Static': entry.is_static,
+        'Is Object' : entry.constructorVar,
       }));
 
       console.log(
         this.printTable(
           entry_tuples,
-          ['Name', 'Access Modifier', 'Type', 'Is Static']
+          ['Name', 'Access Modifier', 'Type', 'Is Static', 'Is Object']
 
         )
       );
